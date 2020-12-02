@@ -10,22 +10,24 @@ import sys
 
 async def connectToTracker(ip, port, cli):
     if ip == None and port == None:
-        # Default IP and Port
+        # Use default IP and port
         ip = "127.0.0.1"
         port = 8888
     
     try:
         print("Connecting to " + ip + ":" + str(port) + "...")
         reader, writer = await asyncio.open_connection(ip, int(port))
-        
+        print("Connected.")
+
         opt = handleUserChoice()
-        payload = cli.handleServerRequest(opc=opt, ip=ip, port=port)
-        print("[PEER] Debug: sending payload:", payload)
+        if opt > 0 :
+            payload = cli.handleServerRequest(opc=opt, ip=ip, port=port)
+            print("[PEER] Debug: sending payload:", payload)
 
-        writer.write(payload.encode())
-        data = await reader.read(100)
+            writer.write(payload.encode())
+            data = await reader.read(100)
 
-        print(f'[PEER] Received: {json.loads(data.decode())!r}')
+            print(f'[PEER] Received: {json.loads(data.decode())!r}')
 
         writer.close()
 
@@ -35,27 +37,30 @@ async def connectToTracker(ip, port, cli):
 
 def handleUserChoice():
     while True:
-        print("\nWelcome to p2py.")
+        print("\nChoose an option: ")
         print("[1] Get list of torrents")
         print("[2] Upload a new file")
         print("[3] Exit")
-        userInput = int(input("[p2py client]: Choose an option: "))
+        userInput = input("[p2py client]: ")
         
-        # TODO: error checking for input
-        if userInput in range(0,3):
-            if userInput == 1:
-                print("\n[PEER] Get list")
-                return p.OPT_GET_LIST
+        try:
+            userInput = int(userInput)
+            
+            if userInput in range(0,4):
+                if userInput == 1:
+                    print("\n[PEER] Get list of torrents")
+                    return p.OPT_GET_LIST
 
-            elif userInput == 2:
-                print("\n[TODO] Upload new file")
-                return p.OPT_UPLOAD_FILE
+                elif userInput == 2:
+                    print("\n[TODO] Upload new file")
+                    return p.OPT_UPLOAD_FILE
 
-            elif userInput == 3:
-                sys.exit(0)
-    
-        else:
-            print("Invalid input. Please try again.")
+                elif userInput == 3:
+                    return -1
+            else:
+                print("Invalid input. Please try again.")
+        except ValueError:
+            print("Invalid input, only integer values allowed.")
 
 def parseCommandLine():
     ip = None
@@ -65,7 +70,7 @@ def parseCommandLine():
         if "-i" in sys.argv and "-p" in sys.argv:
             # TODO: error checking
             ip = sys.argv[sys.argv.index("-i") + 1]
-            port = sys.argv[sys.argv.index("-p" + 1)]
+            port = sys.argv[sys.argv.index("-p") + 1]
     return ip, port
 
 def main():

@@ -85,30 +85,34 @@ class TrackerServer:
     
     async def handleRequest(self, reader, writer):
         # TODO: 200 is the current constant, what is max req payload size?
-        data = await reader.read(200)
-        message = json.loads(data.decode())
-        addr = writer.get_extra_info('peername')
+        try:
+            data = await reader.read(200)
+        
+            message = json.loads(data.decode())
+            addr = writer.get_extra_info('peername')
 
-        print(f"\n[TRACKER] Debug: received {message!r} from {addr!r}.")
+            print(f"\n[TRACKER] Debug: received {message!r} from {addr!r}.")
 
-        payload = self.receiveRequest(message)
+            payload = self.receiveRequest(message)
 
-        # TODO: this CANNOT differentiate from torrent_list vs torrent_obj
-        response = {}
+            # TODO: this CANNOT differentiate from torrent_list vs torrent_obj
+            response = {}
 
-        if type(payload) is dict:
-            response.update({"opt": p.RET_SUCCESS})
-            response.update({"torrent_list": payload})
+            if type(payload) is dict:
+                response.update({"opt": p.RET_SUCCESS})
+                response.update({"torrent_list": payload})
 
-        # TO CONSIDER: receiveRequest(...) only returns 0/1 or [torrent_list, torrent_obj]
-        else:
-            response.update({"opt": payload})
+            # TO CONSIDER: receiveRequest(...) only returns 0/1 or [torrent_list, torrent_obj]
+            else:
+                response.update({"opt": payload})
 
-        jsonResponse = json.dumps(response)
-        writer.write(jsonResponse.encode())
-        await writer.drain()
-
-        print("[TRACKER] Closing the connection for", addr)
+            jsonResponse = json.dumps(response)
+            writer.write(jsonResponse.encode())
+            await writer.drain()
+            print("[TRACKER] Closing the connection for", addr)
+        except:
+            print("[TRACKER] Peer", writer.get_extra_info('peername'), "has disconnected.")
+            
         writer.close()
 
 async def main():
