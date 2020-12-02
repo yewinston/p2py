@@ -1,5 +1,9 @@
 from bencode import *
 from torrent import *
+# FIXME: would p be confusing for peer?
+import protocol as p
+import asyncio
+import json
 
 class TrackerServer:                              
     #torrent metadata
@@ -8,22 +12,23 @@ class TrackerServer:
         self.torrent = {}              #the torrent list (dictionary), defined by its unique torrentID
         self.peers = {}                #distingueshed by peerId, value will be a dictionary that holds that user's information 
 
-    def receiveRequest(self, req: dict):          #the things that will be returned will be in dict form
-        if req['OPC'] == 1:
+    def receiveRequest(self, req):          #the things that will be returned will be in dict form
+        opc = req.get('opc')
+
+        if opc == p.OPT_GET_LIST:
             return self.getTorrentDict()
-        
-        elif req['OPC'] == 2:
+        elif opc == p.OPT_GET_TORRENT:
             return self.getTorrentObject(req)
-        elif req['OPC'] ==3:
+        elif opc == p.OPT_UPDATE_STATUS:
             return self.updatePeerStatus(req)
-        elif req['OPC']==4:
+        elif opc == p.OPT_STOP_SEED:
             return self.updateStopSeed(req)
-        elif req['OPC'] ==5: #upload new file --> create new torrent object
+        elif opc == p.OPT_UPLOAD_FILE: #upload new file --> create new torrent object
             return self.addNewFile(req)
-        elif req['OPC'] == 6:               #user selects a specific tid to be part of
+        elif opc == 6:               #user selects a specific tid to be part of
             return self.addPeer(req)
         else:                   #invalid OPC
-            return None
+            return None # possibly p.RET_FAIL?
     
     def getTorrentDict(self):
         responseDict = {'torrentList': self.torrent}
@@ -41,13 +46,13 @@ class TrackerServer:
             return None
         self.peers[ req['pid'] ]['status'] = 'seed'         #change peer status to seeder
         #self.peers[ req['pid'] ]['n_pieces']  =            #TODO: update set pieces, have to create torrent obj first
-        return 1
+        return p.RET_SUCCESS
 
     def updateStopSeed(self, req: dict):
         if req['pid'] not in self.peers:
-            return None
+            return p.RET_FAIL
         self.peers[ req['pid'] ]['status'] = 'None'        #Removes role as seeder
-        return 1
+        return p.RET_SUCCESS
 
     def addNewFile(self, req: dict):
         myTorrent = Torrent(req['filename'])        #create the torrent object
@@ -62,7 +67,7 @@ class TrackerServer:
         }
         self.nextTorrentId+=1
         self.peers[req['pid']] = newPeer            #insert peer into peerlist
-        return 1
+        return p.RET_SUCCESS
     
     def addPeer(self, req: dict):
         flag = True
@@ -76,7 +81,46 @@ class TrackerServer:
             'pieces': 0
         }
         self.peers[req['pid']] = newPeer            #insert peer into peerlist
-        return 1
+        return p.RET_SUCCESS
+    
+    async def handleRequest(self, reader, writer):
+        # TODO: 200 is the current constant, what is max req payload size?
+        data = await reader.read(200)
+        message = json.loads(data.decode())
+        addr = writer.get_extra_info('peername')
 
+        print(f"\n[TRACKER] Debug: received {message!r} from {addr!r}.")
 
-                                            
+        payload = self.receiveRequest(message)
+
+        # TODO: this CANNOT differentiate from torrent_list vs torrent_obj
+        response = {}
+
+        if type(payload) is dict:
+            response.update({"opt": p.RET_SUCCESS})
+            response.update({"torrent_list": payload})
+
+        # TO CONSIDER: receiveRequest(...) only returns 0/1 or [torrent_list, torrent_obj]
+        else:
+            response.update({"opt": payload})
+
+        jsonResponse = json.dumps(response)
+        writer.write(jsonResponse.encode())
+        await writer.drain()
+
+        print("[TRACKER] Closing the connection for", addr)
+        writer.close()
+
+async def main():
+    ip = "127.0.0.1"
+    port = 8888
+    
+    t = TrackerServer()
+    server = await asyncio.start_server(t.handleRequest, ip, port)
+    addr = server.sockets[0].getsockname()
+    print(f'[TRACKER] Serving on {addr}')
+
+    async with server:
+        await server.serve_forever()
+
+asyncio.run(main())

@@ -14,7 +14,7 @@ class Client:
         """
         Builds the Request message. Returns as a json object that is encoded into bytes.
         """
-        payload = {"opcode:": opc, "ip": ip, "port": port, "peer_id": peer_id, "torrent_id": torrent_id, "filename": filename, "numPieces": numPieces}
+        payload = {"opc": opc, "ip": ip, "port": port, "peer_id": peer_id, "torrent_id": torrent_id, "filename": filename, "numPieces": numPieces}
         return json.dumps(payload)
 
     def handleServerResponse(self, response):
