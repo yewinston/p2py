@@ -21,8 +21,10 @@ async def connectToTracker(ip, port, cli):
 
         opt = handleUserChoice()
         if opt > 0 :
-            payload = cli.handleServerRequest(opc=opt, ip=ip, port=port)
+            payload = cli.createServerRequest(opc=opt, ip=ip, port=port)
             print("[PEER] Debug: sending payload:", payload)
+
+# Leon: Would it be more clean to delegate the send() on the client.py side? Or should we handle it here.
 
             writer.write(payload.encode())
             data = await reader.read(100)

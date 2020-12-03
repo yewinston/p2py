@@ -1,15 +1,14 @@
-# should probably define this as a constant in protocol.py
-piece_size = 4096 # 4KiB
+import protocol as p
 
 def encodeToBytes(file_name):
     pieces = []
     numPieces = 0
     with open(file_name, "rb") as input_file:
-        piece = input_file.read(piece_size)
+        piece = input_file.read(p.PIECE_SIZE)
         while piece:
             numPieces+=1
             pieces.append(piece)
-            piece = input_file.read(piece_size)
+            piece = input_file.read(p.PIECE_SIZE)
     return pieces, numPieces
 
 def decodeToFile(pieces, output_name):

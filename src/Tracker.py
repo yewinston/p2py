@@ -19,7 +19,7 @@ class TrackerServer:
             return self.getTorrentDict()
         elif opc == p.OPT_GET_TORRENT:
             return self.getTorrentObject(req)
-        elif opc == p.OPT_UPDATE_STATUS:
+        elif opc == p.OPT_START_SEED:
             return self.updatePeerStatus(req)
         elif opc == p.OPT_STOP_SEED:
             return self.updateStopSeed(req)
