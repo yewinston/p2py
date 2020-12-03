@@ -8,36 +8,6 @@ import file_handler
 import asyncio
 import sys
 
-async def connectToTracker(ip, port, cli):
-    if ip == None and port == None:
-        # Use default IP and port
-        ip = "127.0.0.1"
-        port = 8888
-    
-    try:
-        print("Connecting to " + ip + ":" + str(port) + "...")
-        reader, writer = await asyncio.open_connection(ip, int(port))
-        print("Connected.")
-
-        opt = handleUserChoice()
-        if opt > 0 :
-            payload = cli.createServerRequest(opc=opt, ip=ip, port=port)
-            print("[PEER] Debug: sending payload:", payload)
-
-# Leon: Would it be more clean to delegate the send() on the client.py side? Or should we handle it here.
-
-            jsonPayload = json.dumps(payload)
-            writer.write(jsonPayload.encode())
-            data = await reader.read(100)
-
-            print(f'[PEER] Received: {json.loads(data.decode())!r}')
-
-        writer.close()
-
-    except ConnectionError:
-        print("Connection Error: unable to connect to tracker.")
-        sys.exit(-1) # different exit number can be used, eg) errno library
-
 def handleUserChoice():
     while True:
         print("\nChoose an option: ")
@@ -76,17 +46,23 @@ def parseCommandLine():
             port = sys.argv[sys.argv.index("-p") + 1]
     return ip, port
 
-def main():
+async def main():
     cli = Client()
     ip, port = parseCommandLine()
-    asyncio.run(connectToTracker(ip, port, cli))
-    
-    # scenario 1: send a message
-    # message = cli.createTorrentPayload("../files/sample.txt")
-    # cli.send("socket", message)
 
-    # # scenario 2: receive a message
-    # cli.handleServerResponse(message)
+    reader, writer = await cli.connectToTracker(ip, port)
+    opt = handleUserChoice()
+
+    if opt > 0:
+        payload = cli.createServerRequest(opc=opt, ip=ip, port=port)
+        # print("[PEER] Debug payload:", payload)
+
+        # scenario 1: send a message
+        await cli.send(writer, payload)
+
+        # scenario 2: receive a message
+        await cli.receive(reader)
+    writer.close()
     
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

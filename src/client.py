@@ -5,6 +5,7 @@ from protocol import *
 import file_handler
 import json
 import asyncio
+import sys
 from socket import *
 
 class Client:
@@ -18,20 +19,42 @@ class Client:
 
 ########### CONNECTION HANDLING ###########
 
-    async def receive(self, reader, writer):
+    async def connectToTracker(self, ip, port):
+        if ip == None and port == None:
+            # Use default IP and port
+            ip = "127.0.0.1"
+            port = 8888
+    
+        try:
+            print("Connecting to " + ip + ":" + str(port) + "...")
+            reader, writer = await asyncio.open_connection(ip, int(port))
+            print("Connected.")
+            return reader, writer
+
+        except ConnectionError:
+            print("Connection Error: unable to connect to tracker.")
+            sys.exit(-1) # different exit number can be used, eg) errno library
+
+    async def receive(self, reader):
         """
         Handle incoming requests and decode to the JSON object.
         Pass the JSON object to handleRequest() that will handle the request appropriately.
         """
-        print("todo") 
+        data = await reader.read(200)
+        payload = json.loads(data.decode())
+        print(f'[PEER] Received decoded message: {payload!r}')
+        # TODO: handle OPC to determine whether its SERVER or PEER response using OPC 
+        # self.handleServerResponse(payload)
+        return
 
-    def send(self, payload:dict):
+    async def send(self, writer, payload:dict):
         """
         Encode the payload to an encoded JSON object and send to the appropriate client/server
         ? Do we automatically know who to send it to ?
         """
-        # socket.send(request)
-        print("sending encoded request message:", (json.dumps(payload)).encode())
+        jsonPayload = json.dumps(payload)
+        print("[PEER] Sending encoded request message:", (jsonPayload))
+        writer.write(jsonPayload.encode())
 
 
 ########### REQUEST & RESPONSE HANDLING ###########
