@@ -26,7 +26,8 @@ async def connectToTracker(ip, port, cli):
 
 # Leon: Would it be more clean to delegate the send() on the client.py side? Or should we handle it here.
 
-            writer.write(payload.encode())
+            jsonPayload = json.dumps(payload)
+            writer.write(jsonPayload.encode())
             data = await reader.read(100)
 
             print(f'[PEER] Received: {json.loads(data.decode())!r}')

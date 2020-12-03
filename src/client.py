@@ -157,6 +157,17 @@ class Client:
         Ideally, create a unique peer ID... maybe need a hashing function
         """
         return 1
+        
+class Piece:
+    """
+    Files are split into pieces 
+    index -> piece's index in the expected buffer
+
+    """
+    def __init__(self, index: int, data: bytes):
+        self.index = index
+        self.data = data
+        self.length = length
 
 class PieceBuffer:
     """
@@ -203,15 +214,6 @@ class PieceBuffer:
                 missingPieces.append(idx)
         return missingPieces
     
-class Piece:
-    """
-    Files are split into pieces 
-    index -> piece's index in the expected buffer
 
-    """
-    def __init__(self, index: int, data: bytes):
-        self.index = index
-        self.data = data
-        self.length = length
 
     
