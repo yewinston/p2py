@@ -65,7 +65,7 @@ async def main():
         opt = handleUserChoice()
 
         if opt > 0:
-            payload = cli.createServerRequest(opc=opt, ip=dest_ip, port=dest_port)
+            payload = cli.createServerRequest(opc=opt)
             # print("[PEER] Debug payload:", payload)
 
             # scenario 1: send a message

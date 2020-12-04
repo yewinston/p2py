@@ -1,6 +1,6 @@
 import protocol as p
 
-def encodeToBytes(file_name):
+def encodeToBytes(file_name:str):
     pieces = []
     numPieces = 0
     with open(file_name, "rb") as input_file:
@@ -11,7 +11,7 @@ def encodeToBytes(file_name):
             piece = input_file.read(p.PIECE_SIZE)
     return pieces, numPieces
 
-def decodeToFile(pieces, output_name):
+def decodeToFile(pieces:[], output_name:str):
     with open(output_name, "wb") as output_file:
         for block in pieces:
             output_file.write(block)
