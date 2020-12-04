@@ -1,6 +1,12 @@
 # defines the PEER2PEER protocol and PEER2SERVER protocol.
 
-# PEER 2 SERVER
+#Server 2 Peer
+OPT_RES_LIST = 10
+OPT_RES_OBJ = 11
+OPT_RES_UPDATE_STAT = 12         #the last 2 isn't really needed?
+OPT_RES_UPDATE_STOP = 13
+
+# PEER 2 SERVER              
 OPT_GET_LIST = 10
 OPT_GET_TORRENT = 11
 OPT_START_SEED = 12
