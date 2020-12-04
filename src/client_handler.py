@@ -36,33 +36,44 @@ def handleUserChoice():
             print("Invalid input, only integer values allowed.")
 
 def parseCommandLine():
-    ip = None
-    port = None
+    src_ip = None
+    src_port = None
+    dest_ip = None
+    dest_port = None
 
-    if len(sys.argv) > 0:
-        if "-i" in sys.argv and "-p" in sys.argv:
-            # TODO: error checking
-            ip = sys.argv[sys.argv.index("-i") + 1]
-            port = sys.argv[sys.argv.index("-p") + 1]
-    return ip, port
+    if len(sys.argv) - 1 == 4:
+        # TODO: error checking
+        src_ip = sys.argv[1]
+        src_port = sys.argv[2]
+        dest_ip = sys.argv[3]
+        dest_port = sys.argv[4]
+    elif len(sys.argv) - 1 == 2:
+        src_ip = sys.argv[1]
+        src_port = sys.argv[2]
+    else:
+        print("Please double check arguments:")
+        print("client_handler.py [source ip] [source port] [tracker_ip] [tracker_port]")
+    return src_ip, src_port, dest_ip, dest_port
 
 async def main():
-    cli = Client()
-    ip, port = parseCommandLine()
+    src_ip, src_port, dest_ip, dest_port = parseCommandLine()
+    
+    if src_ip != None and src_port != None:
+        cli = Client(src_ip, src_port)
 
-    reader, writer = await cli.connectToTracker(ip, port)
-    opt = handleUserChoice()
+        reader, writer = await cli.connectToTracker(dest_ip, dest_port)
+        opt = handleUserChoice()
 
-    if opt > 0:
-        payload = cli.createServerRequest(opc=opt, ip=ip, port=port)
-        # print("[PEER] Debug payload:", payload)
+        if opt > 0:
+            payload = cli.createServerRequest(opc=opt, ip=dest_ip, port=dest_port)
+            # print("[PEER] Debug payload:", payload)
 
-        # scenario 1: send a message
-        await cli.send(writer, payload)
+            # scenario 1: send a message
+            await cli.send(writer, payload)
 
-        # scenario 2: receive a message
-        await cli.receive(reader)
-    writer.close()
+            # scenario 2: receive a message
+            await cli.receive(reader)
+        writer.close()
     
 if __name__ == "__main__":
     asyncio.run(main())

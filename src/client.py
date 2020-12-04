@@ -9,13 +9,15 @@ import sys
 from socket import *
 
 class Client:
-    def __init__(self):
+    def __init__(self, src_ip, src_port):
         self.peer_id = self.createPeerID()
         self.piece_buffer = PieceBuffer()
         self.peer_choked = True
         self.peer_interested = False
         self.peer_am_seeding = False
         self.peer_am_leeching = False
+        self.src_ip = src_ip
+        self.src_port = src_port
 
 ########### CONNECTION HANDLING ###########
 
@@ -23,12 +25,12 @@ class Client:
         if ip == None and port == None:
             # Use default IP and port
             ip = "127.0.0.1"
-            port = 8888
+            port = "8888"
     
         try:
-            print("Connecting to " + ip + ":" + str(port) + "...")
+            print("Connecting to " + ip + ":" + port + " ...")
             reader, writer = await asyncio.open_connection(ip, int(port))
-            print("Connected.")
+            print("Connected as peer: " + self.src_ip + ":" + self.src_port + ".")
             return reader, writer
 
         except ConnectionError:
