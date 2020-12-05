@@ -8,9 +8,8 @@ import json
 class TrackerServer:                              
     #torrent metadata
     def __init__(self):
-        self.nextTorrentId = 1 
+        self.nextTorrentId = 0 
         self.torrent = {}              #the torrent list (dictionary), defined by its unique torrentID
-        self.peers = {}                #distingueshed by peerId, value will be a dictionary that holds that user's information 
 
     def handleRequest(self, req):
         opc = req.get('OPC')
@@ -46,60 +45,62 @@ class TrackerServer:
 
         return response
     
-    def getTorrentDict(self):
-        return self.torrent
+    def getTorrentDict(self):                   #res opcode=1
+        responseDict = {
+            'torrentList': self.torrent,            #THIS WILL BE RETURNED AS A DICT: DICT
+            'opc': p.OPT_RES_LIST,
+            'res': p.RET_SUCCESS
+        }
+        return responseDict
     
     def getTorrentObject(self, req: dict):      #res opcode=2
-        responseDict = {}
-
+        responseDict = {
+            'opc': p.OPT_RES_OBJ,
+            'res': p.RET_SUCCESS                    #to tell client that the torrent object exists
+        }
         if req['tid'] not in self.torrent:  #torrent object does not exist in list
+            responseDict['res'] = p.RET_FAIL
             return responseDict                    
         myTorrentObj = self.torrent[ req['tid'] ]
-        responseDict['torrentObj'] = myTorrentObj                   #TODO: Do we want to add the peer list with the torrent object?
-
-        torr_peers = []
-        for key, value in self.peers.items():                 #obtain all peers who are in that torrent as a list of dict
-            if (value['tid'] == req['tid']):
-                torr_peers.append(value)          #TODO: A list of dictionaries isn't working
-        responseDict['peers'] = torr_peers
-
-        newPeer = {                             #adds new peer into peer list
-            'ip': req['ip_address'],
-            'status':  'leecher',
-            'tid': req['tid'],
-            'port': req['port'],
-            'pieces': 0
-        }
-        self.peers[req['pid']] = newPeer    
+        responseDict['torrentObj'] = myTorrentObj                 
+        self.torrent[req['tid'] ].addPeer(req, 'leecher')                    #add peer into torrent object      
         return responseDict
 
     def updatePeerStatus(self, req:dict):
-        if req['pid'] not in self.peers:
-            return p.RET_FAIL
-        self.peers[ req['pid'] ]['status'] = 'seed'         #change peer status to seeder
-        self.peers[ req['pid'] ]['n_pieces']  = self.torrent[req['tid'] ].pieces
-        return p.RET_SUCCESS
+        responseDict = {
+            'opc': p.OPT_START_SEED,
+            'res': p.RET_SUCCESS
+        }
+        if req['tid'] not in self.torrent:
+            responseDict['res'] = p.RET_FAIL
+            return responseDict
+        self.torrent[ req['tid'] ].updatePeer(req, 'seeder')
+        return responseDict
 
     def updateStopSeed(self, req: dict): 
-        if req['pid'] not in self.peers:
-            return p.RET_FAIL
-        self.peers[ req['pid'] ]['status'] = 'None'     
-        return p.RET_SUCCESS
-
-    def addNewFile(self, req: dict):            
-        myTorrent = Torrent(req['filename'])        #create the torrent object
-        self.torrent[self.nextTorrentId] = myTorrent    #insert into torrent dictionary
-        print(myTorrent.filename)
-        newPeer = {
-            'ip': req['ip_address'],
-            'status':  'hello',
-            'tid': self.nextTorrentId,
-            'port': req['port'],
-            'pieces': req['pieces']
+        responseDict = {
+            'opc': p.OPT_STOP_SEED,
+            'res': p.RET_SUCCESS
         }
-        self.nextTorrentId+=1
-        self.peers[req['pid']] = newPeer            #insert peer into peerlist
-        return p.RET_SUCCESS
+        if req['tid'] not in self.torrent:
+            responseDict['res'] = p.RET_FAIL
+            return responseDict
+        self.torrent[req['tid'] ].updatePeer(req, 'None')   
+        return responseDict
+
+    def addNewFile(self, req: dict):
+        responseDict = {
+            'opc': p.OPT_UPLOAD_FILE,
+            'res': p.RET_SUCCESS
+        }
+        try:                    
+            myTorrent = Torrent(req['filename'])        #create the torrent object
+            myTorrent.addPeer(req, 'seeder')                      #add peer the seeder into torrent object   
+            self.torrent[self.nextTorrentId] = myTorrent    #insert into torrent dictionary
+            self.nextTorrentId+=1
+        except:
+            responseDict['res'] = p.RET_FAIL
+        return responseDict
     
     async def receiveRequest(self, reader, writer):
         '''
