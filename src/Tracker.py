@@ -12,36 +12,47 @@ class TrackerServer:
         self.torrent = {}              #the torrent list (dictionary), defined by its unique torrentID
         self.peers = {}                #distingueshed by peerId, value will be a dictionary that holds that user's information 
 
-    def receiveRequest(self, req):          #the things that will be returned will be in dict form
-        opc = req.get('opc')
-
+    def handleRequest(self, req):
+        opc = req.get('OPC')
+        response = {"OPC": opc}
+        
         if opc == p.OPT_GET_LIST:
-            return self.getTorrentDict()
+            torrent_list = self.getTorrentDict()
+            if torrent_list:
+                response.update({"torrent_list": self.getTorrentDict()})
+                response.update({ "RET": p.OPT_RES_LIST })
+            else:
+                response.update({ "RET": p.RET_FAIL })
+
         elif opc == p.OPT_GET_TORRENT:
-            return self.getTorrentObject(req)
+            torrent_obj = self.getTorrentObject(req)
+            if torrent_obj:
+                response.update({"torrent_obj": torrent_obj})
+                response.update({ "RET": p.OPT_RES_OBJ })
+            else:
+                response.update({ "RET": p.RET_FAIL })
+
         elif opc == p.OPT_START_SEED:
-            return self.updatePeerStatus(req)
+            response.update({"RET": self.updatePeerStatus(req)})
+
         elif opc == p.OPT_STOP_SEED:
-            return self.updateStopSeed(req)
+            response.update({"RET": self.updateStopSeed(req)})
+
         elif opc == p.OPT_UPLOAD_FILE: #upload new file --> create new torrent object
-            return self.addNewFile(req)
+            response.update({"RET": self.addNewFile(req)})
+
         else:                   #invalid opc
-            return p.RET_FAIL # possibly p.RET_FAIL?
+            response.update({ "RET": p.RET_FAIL })
+
+        return response
     
-    def getTorrentDict(self):                   #res opcode=1
-        responseDict = {
-            'torrentList': self.torrent,
-            'opc': p.OPT_RES_LIST
-        }
-        return responseDict
+    def getTorrentDict(self):
+        return self.torrent
     
     def getTorrentObject(self, req: dict):      #res opcode=2
-        responseDict = {
-            'opc': p.OPT_RES_OBJ,
-            'res': True                     #to tell client that the torrent object exists
-        }
+        responseDict = {}
+
         if req['tid'] not in self.torrent:  #torrent object does not exist in list
-            responseDict['res'] = False
             return responseDict                    
         myTorrentObj = self.torrent[ req['tid'] ]
         responseDict['torrentObj'] = myTorrentObj                   #TODO: Do we want to add the peer list with the torrent object?
@@ -90,37 +101,34 @@ class TrackerServer:
         self.peers[req['pid']] = newPeer            #insert peer into peerlist
         return p.RET_SUCCESS
     
-    
-    async def handleRequest(self, reader, writer):
-        # TODO: 200 is the current constant, what is max req payload size?
+    async def receiveRequest(self, reader, writer):
+        '''
+            Take in the client request
+            It will call handleRequest -> give it a response object {"OPT": __, "RET": __, "payload": __ }
+            receiveRequest will send this ---^ response object
+        '''
+        # TODO: 200 is the current constant, what is max req request size?
         try:
             data = await reader.read(200)
         
-            message = json.loads(data.decode())
+            cliRequest = json.loads(data.decode())
             addr = writer.get_extra_info('peername')
 
-            print(f"\n[TRACKER] Debug: received {message!r} from {addr!r}.")
+            print(f"\n[TRACKER] Debug received {cliRequest!r} from {addr!r}.")
+            
+            # TO CONSIDER: handleRequest(...) only returns 0/1 or [torrent_list, torrent_obj]
+            response = self.handleRequest(cliRequest)
 
-            payload = self.receiveRequest(message)
-
-            # TODO: this CANNOT differentiate from torrent_list vs torrent_obj
-            response = {}
-
-            if type(payload) is dict:
-                response.update({"opt": p.RET_SUCCESS})
-                response.update({"torrent_list": payload})
-
-            # TO CONSIDER: receiveRequest(...) only returns 0/1 or [torrent_list, torrent_obj]
-            else:
-                response.update({"opt": payload})
-
-            jsonResponse = json.dumps(response)
-            writer.write(jsonResponse.encode())
+            # Send payload response to client
+            payload = json.dumps(response)
+            print("[TRACKER] Debug send payload:", payload)
+            writer.write(payload.encode())
+            
             await writer.drain()
             print("[TRACKER] Closing the connection for", addr)
         except:
             print("[TRACKER] Peer", writer.get_extra_info('peername'), "has disconnected.")
-            
+
         writer.close()
 
 async def main():
@@ -128,7 +136,7 @@ async def main():
     port = 8888
     
     t = TrackerServer()
-    server = await asyncio.start_server(t.handleRequest, ip, port)
+    server = await asyncio.start_server(t.receiveRequest, ip, port)
     addr = server.sockets[0].getsockname()
     print(f'[TRACKER] Serving on {addr}')
 
