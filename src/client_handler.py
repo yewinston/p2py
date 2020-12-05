@@ -11,24 +11,35 @@ import sys
 def handleUserChoice():
     while True:
         print("\nChoose an option: ")
-        print("[1] Get list of torrents")
-        print("[2] Upload a new file")
-        print("[3] Exit")
+        print("[1] Get & display list of torrents")
+        print("[2] Download Torrent")
+        print("[3] Upload a new file")
+        print("[4] Help")
+        print("[5] Exit")
         userInput = input("[p2py client]: ")
         
         try:
             userInput = int(userInput)
             
-            if userInput in range(0,4):
+            if userInput in range(0,6):
                 if userInput == 1:
                     print("\n[PEER] Get list of torrents")
-                    return p.OPT_GET_LIST
+                    return [p.OPT_GET_LIST, None, None]
 
                 elif userInput == 2:
-                    print("\n[TODO] Upload new file")
-                    return p.OPT_UPLOAD_FILE
+                    # NOTE we need error check.. like if the torrent id doesnt exist?
+                    torrent_id = int(input("Please enter the torrent id\n"))
+                    return [p.OPT_GET_TORRENT, torrent_id, None]
 
                 elif userInput == 3:
+                    filename = str(input("Please enter the filename.ext\n"))
+                    return [p.OPT_UPLOAD_FILE, None, filename]
+                
+                elif userInput == 4:
+                    print("TODO: Heres some helpful stuff.")
+                    return -1
+                
+                elif userInput == 5:
                     return -1
             else:
                 print("Invalid input. Please try again.")
@@ -62,12 +73,17 @@ async def main():
         cli = Client(src_ip, src_port)
 
         reader, writer = await cli.connectToTracker(dest_ip, dest_port)
-        opt = handleUserChoice()
 
-        if opt > 0:
-            # DEBUG: hardcoding filename
-            payload = cli.createServerRequest(opc=opt, torrent_id=None, filename='sample.txt')
-            # print("[PEER] Debug payload:", payload)
+        # NOTE - need a better way of getting user inputs. Currently just have "None" if the field is not used
+        argList = handleUserChoice()
+
+        if argList[0] > 0:
+            payload = cli.createServerRequest(opc=argList[0], torrent_id=argList[1], filename=argList[2])
+
+            # NOTE: hacky way to handle invalid file handling (we pass an empty payload)
+            if not payload:
+                writer.close()
+                return
 
             # scenario 1: send a message
             await cli.send(writer, payload)

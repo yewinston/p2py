@@ -2,18 +2,19 @@
 Provides Client's functionalities and actions. See client_handler which is the main entry point for user interaction handling
 """
 from protocol import *
+from socket import *
 import file_handler
 import json
 import asyncio
 import sys
 import uuid
-from socket import *
+import hashlib
 
 class Client:
     def __init__(self, src_ip, src_port):
-        self.peer_id = self.createPeerID()
         self.src_ip = src_ip
         self.src_port = src_port
+        self.peer_id = self.createPeerID()
 
         # Peer States
         self.peer_choked = True
@@ -66,11 +67,12 @@ class Client:
         Handle incoming requests and decode to the JSON object.
         Pass the JSON object to handleRequest() that will handle the request appropriately.
         """
-        data = await reader.read(200)
+
+        data = await reader.read(READ_SIZE)
         payload = json.loads(data.decode())
-        print(f'[PEER] Received decoded message: {payload!r}')
-        # TODO: handle OPC to determine whether its SERVER or PEER response using OPC 
-        # self.handleServerResponse(payload)
+        print(f'[PEER] Received decoded message: {payload!r}\n')
+        #TODO NOTE: handle OPC to determine whether its SERVER or PEER response using OPC 
+        self.handleServerResponse(payload)
         return
 
     async def send(self, writer, payload:dict):
@@ -94,12 +96,26 @@ class Client:
         ret = response[RET]
         opc = response[OPC]
 
-        if ret == RET_FAIL or ret != RET_SUCCESS:
+        if ret == RET_FAIL:
             return -1
         
+        if ret == RET_ALREADY_SEEDING:
+            print("[PEER] UPLOAD FAIL: You are already currently seeding a file.")
+            return -1
+
+
         if opc == OPT_GET_LIST:
+
+            # TODO NOTE: Currently we will just print the list of torrents here... should we delegate this back to client_handler somehow?
+            # Need to truncate filenames.. and have a better UI command line interface
             torrent_list = response[TORRENT_LIST]
-            print("todo: print the results?")
+
+            print("\n///////////////////////////////////////////////////////////////////////////////////////////////////\n")
+            print("TID \t FILE_NAME \t TOTAL_PIECES \t SEEDERS \t")
+            print("--- \t -------- \t ------------ \t ------- \t")
+            for idx, curr_torrent in enumerate(torrent_list):
+                print(curr_torrent[TID], '\t', curr_torrent[FILE_NAME], '\t',  curr_torrent[TOTAL_PIECES], '\t\t', curr_torrent[SEEDER_LIST])
+            print("\n///////////////////////////////////////////////////////////////////////////////////////////////////\n")
         elif opc == OPT_GET_TORRENT:
             torrent = response[TORRENT]
             self.seeders_list = response[PEER_LIST]
@@ -110,7 +126,6 @@ class Client:
             print("DEBUG: downloading torrent : ", torrent.filename)
         elif opc == OPT_START_SEED or opc == OPT_UPLOAD_FILE:
             self.peer_am_seeding = True
-            print("todo: allow seeding... the user should not be able to download other files?")
         elif opc == OPT_STOP_SEED:
             self.peer_am_seeding = False
             print("todo: allow the user to regain control?")
@@ -129,12 +144,13 @@ class Client:
             payload[TID] = torrent_id
         elif opc == OPT_UPLOAD_FILE:
             numPieces = self.uploadFile(filename)
+            
+            # NOTE: hacky way to check if the file was valid..
+            if numPieces == 0:
+                return {}
+            
             payload[FILE_NAME] = filename
             payload[TOTAL_PIECES] = numPieces
-
-            #DEBUG send a piece to tracker
-            # payload["DEBUG_PIECE_1"] = (self.piece_buffer.getBuffer()[0])
-            # print(self.piece_buffer.getBuffer()[0])
 
         return payload
 
@@ -242,16 +258,14 @@ class Client:
         populated and initialized.
         Returns the number of pieces in the created piece buffer.
         """
-        
-        # DEBUGGING:
-        filename = 'sample.txt'
         pieces = []
         numPieces = 0
         try:
             pieces, numPieces = file_handler.encodeToBytes(filename)
         except:
-            print("Exception occured in uploadFile() with filename:", filename)
-
+            print("Exception occured in uploadFile() with filename:", '\''+filename+'\'', ", please check your filename or directory.")
+            return 0
+           
         # Set the buffer size and add the file's data to the buffer.
         self.piece_buffer.setBuffer(numPieces)
 
@@ -266,7 +280,11 @@ class Client:
         Ideally, create a unique peer ID.
         uuid4 > uuid1 as it gives privacy (no MAC address)
         """
-        return str(uuid.uuid4())
+        # TODO NOTE: Commenting this out for now since a new uuid is generated everytime.
+        #return str(uuid.uuid4())
+        hashString = self.src_ip+self.src_port
+        return hashlib.md5(hashString.encode()).hexdigest()
+
         
 class Piece:
     """

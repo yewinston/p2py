@@ -47,11 +47,21 @@ class TrackerServer:
 
         return response
     
-    def getTorrentDict(self) -> dict():                   #res opcode=1
+    def getTorrentDict(self) -> list():                   #res opcode=1
         """
-        Returns a dictionary of available torrents stored in the tracker
+        Returns a list of available torrents stored in the tracker.
         """
-        return self.torrent
+        # TODO NOTE: We need to deconstruct the torrent object into a dict since we can't serialize the object. So currently, it will send a list of dictionaries instead.
+        response = []
+        for torrentObj in self.torrent.values():
+            torrentDict = dict()
+            torrentDict[TID] = torrentObj.tid
+            torrentDict[FILE_NAME] = torrentObj.filename
+            torrentDict[TOTAL_PIECES] = torrentObj.pieces
+            torrentDict[SEEDER_LIST] = torrentObj.getSeeders()
+            torrentDict[LEECHER_LIST] = torrentObj.getLeechers()
+            response.append(torrentDict)
+        return response
     
     def getTorrentObject(self, req: dict) -> dict():      #res opcode=2
         """
@@ -62,7 +72,7 @@ class TrackerServer:
             return responseDict   
 
         torrentObj = self.torrent[req[TID]]
-        # we must deconstruct the torrent object since we can't send an object
+        # NOTE: we must deconstruct the torrent object since we can't send an object
         # for now we'll just say you can only seed once you are done leeching.
         responseDict[TORRENT] = { 
                                   TID: torrentObj.tid,
@@ -71,7 +81,7 @@ class TrackerServer:
                                   SEEDER_LIST: torrentObj.seeders,
                                   LEECHER_LIST: torrentObj.leechers
                                 }                 
-        self.torrent[ req[TID] ].addLeecher(req[PID], req[IP], req[PORT])  
+        self.torrent[ req[TID] ].addLeecher(req[PID], req[IP], req[PORT])
         return responseDict
 
     def updatePeerStatus(self, req:dict) -> int:
@@ -80,7 +90,7 @@ class TrackerServer:
         """
         if req[TID] not in self.torrent:
             return RET_FAIL
-
+        
         self.torrent[ req[TID] ].addSeeder(req[PID], req[IP], req[PORT])
         # for now we'll just say that you can only seed once you are done leeching
         self.torrent[ req[TID]].removeLeecher(req[PID], req[IP], req[PORT])
@@ -102,11 +112,16 @@ class TrackerServer:
         """
         Creates a torrent from the given filename and pieces and adds it to the torrent list
         """
+
+        # Checks if the peer is already seeding a file
+        for torrentObj in self.torrent.values():
+            if req[PID] in torrentObj.getSeeders():
+                return RET_ALREADY_SEEDING
+
         newTorrent = Torrent(self.nextTorrentId, req[FILE_NAME], req[TOTAL_PIECES])        #create the torrent object
         newTorrent.addSeeder(req[PID], req[IP], req[PORT])                      #add peer the seeder into torrent object   
         self.torrent[self.nextTorrentId] = newTorrent    #insert into torrent dictionary
         self.nextTorrentId+=1
-        # print(f"That piece: {req['DEBUG_PIECE_1']!r}")
         return RET_SUCCESS
     
     async def receiveRequest(self, reader, writer):
@@ -115,17 +130,14 @@ class TrackerServer:
             It will call handleRequest -> give it a response object {"OPT": __, RET: __, "payload": __ }
             receiveRequest will send this ---^ response object
         '''
-        # TODO: 200 is the current constant, what is max req request size?
         try:
-            data = await reader.read(600)
+            data = await reader.read(READ_SIZE)
         
             cliRequest = json.loads(data.decode())
             addr = writer.get_extra_info('peername')
 
             print(f"\n[TRACKER] Debug received {cliRequest!r} from {addr!r}.")
-            
             response = self.handleRequest(cliRequest)
-
             # Send payload response to client
             payload = json.dumps(response)
             print("[TRACKER] Debug send payload:", payload)
