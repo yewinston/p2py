@@ -118,12 +118,12 @@ class Client:
             print("\n///////////////////////////////////////////////////////////////////////////////////////////////////\n")
         elif opc == OPT_GET_TORRENT:
             torrent = response[TORRENT]
-            self.seeders_list = response[PEER_LIST]
-            self.piece_buffer.setBuffer(torrent.TOTAL_PIECES)
+            self.seeders_list = torrent[SEEDER_LIST]
+            self.piece_buffer.setBuffer(torrent[TOTAL_PIECES])
             
             #we immediately start the downloading process upon receiving the torrent object
-            self.downloadFile(torrent.pieces, torrent.filename)
-            print("DEBUG: downloading torrent : ", torrent.filename)
+            self.downloadFile(torrent[TOTAL_PIECES], torrent[FILE_NAME])
+            print("DEBUG: downloading torrent : ", torrent[FILE_NAME])
         elif opc == OPT_START_SEED or opc == OPT_UPLOAD_FILE:
             self.peer_am_seeding = True
         elif opc == OPT_STOP_SEED:
@@ -237,13 +237,14 @@ class Client:
         Once done, output it to the output directory with peer_id appended to the filename.
         """
         self.simplePeerSelection(numPieces)
+
         while not self.piece_buffer.checkIfHaveAllPieces:
-            pass
+            continue
         
         pieces2file = []
-        outputDir = './output' + peer_id + '_' + filename
-        for i in range(self.piece_buffer.getSize):
-            pieces2file.append(self.piece_buffer.getData())
+        outputDir = '../output/' + self.peer_id + '_' + filename
+        for i in range(self.piece_buffer.getSize()):
+            pieces2file.append(self.piece_buffer.getData(i))
 
         try:
             file_handler.decodeToFile(pieces2file, outputDir)

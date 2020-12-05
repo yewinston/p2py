@@ -67,22 +67,21 @@ class TrackerServer:
         """
         Returns the specific torrent dictionary from the torrent id
         """
-        responseDict = {}
+        torrentDict = dict()
         if req[TID] not in self.torrent:  #torrent object does not exist in list
-            return responseDict   
+            return {}   
 
-        torrentObj = self.torrent[req[TID]]
         # NOTE: we must deconstruct the torrent object since we can't send an object
         # for now we'll just say you can only seed once you are done leeching.
-        responseDict[TORRENT] = { 
-                                  TID: torrentObj.tid,
-                                  FILE_NAME: torrentObj.filename, 
-                                  TOTAL_PIECES: torrentObj.pieces, 
-                                  SEEDER_LIST: torrentObj.seeders,
-                                  LEECHER_LIST: torrentObj.leechers
-                                }                 
+        torrentObj = self.torrent[req[TID]]
+        torrentDict[TID] = torrentObj.tid
+        torrentDict[FILE_NAME] = torrentObj.filename
+        torrentDict[TOTAL_PIECES] = torrentObj.pieces
+        torrentDict[SEEDER_LIST] = torrentObj.getSeeders()
+        torrentDict[LEECHER_LIST] = torrentObj.getLeechers()
+               
         self.torrent[ req[TID] ].addLeecher(req[PID], req[IP], req[PORT])
-        return responseDict
+        return torrentDict
 
     def updatePeerStatus(self, req:dict) -> int:
         """
@@ -92,7 +91,7 @@ class TrackerServer:
             return RET_FAIL
         
         self.torrent[ req[TID] ].addSeeder(req[PID], req[IP], req[PORT])
-        # for now we'll just say that you can only seed once you are done leeching
+        # NOTE for now we'll just say that you can only seed once you are done leeching
         self.torrent[ req[TID]].removeLeecher(req[PID], req[IP], req[PORT])
         return RET_SUCCESS
 
