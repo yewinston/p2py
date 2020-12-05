@@ -21,7 +21,7 @@ def decodeToFile(pieces:[], output_name:str):
         for block in pieces:
             encodedBlock = block.encode(ENCODING)
             decodedBlock = base64.b64decode(encodedBlock)
-            output_file.write(block)
+            output_file.write(decodedBlock)
 
 
 # TESTING:

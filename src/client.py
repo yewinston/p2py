@@ -55,30 +55,72 @@ class Client:
             print("Connected as leecher: " + self.src_ip + ":" + self.src_port + ".")
 
         except ConnectionError:
-            print("Connection Error: unable to connect to tracker.")
+            print("Connection Error: unable to connect to peer.")
             sys.exit(-1) # different exit number can be used, eg) errno library
 
         await self.send(writer, payload)
         await self.receive(reader)
         writer.close()
 
+    async def receiveRequest(self, reader, writer):
+        """
+        Handle incoming PEER requests and returns the appropriate response object
+        """
+        try:
+            data = await reader.read(READ_SIZE)
+
+            peerRequest = json.loads(data.decode())
+            addr = writer.get_extra_info('peername')
+
+            print(f"\n[PEER] Debug received {peerRequest!r} from {addr!r}.")
+            response = self.handlePeerRequest(peerRequest)
+            payload = json.dumps(response)
+            print("[PEER] Debug send payload:", payload)
+            writer.write(payload.encode())
+            await writer.drain()
+            print("[PEER] Closing the connection for", addr)
+        except:
+            print("[PEER] Peer", writer.get_extra_info('peername'), "has disconnected.")
+        
+        writer.close()
+
+    async def startSeeding(self):
+        """
+        Once a client begins seeding, we need to open and host a connection as a 'server'
+        """
+
+        # TODO NOTE: we need to be able to allow the client to close the server (stop seeding) gracefully
+        server = await asyncio.start_server(self.receiveRequest, self.src_ip, self.src_port)
+        addr = server.sockets[0].getsockname()
+        print(f'[PEER] SEEDING !!! ... Serving on {addr}')
+
+        async with server:
+            await server.serve_forever()
+
+    # TODO NOTE: This should probably be renamed to 'receiveResponse' as that is what this is actually doing
     async def receive(self, reader):
         """
-        Handle incoming requests and decode to the JSON object.
+        Handle incoming RESPONSE messages and decode to the JSON object.
         Pass the JSON object to handleRequest() that will handle the request appropriately.
         """
 
         data = await reader.read(READ_SIZE)
         payload = json.loads(data.decode())
         print(f'[PEER] Received decoded message: {payload!r}\n')
-        #TODO NOTE: handle OPC to determine whether its SERVER or PEER response using OPC 
-        self.handleServerResponse(payload)
-        return
+        opc = payload[OPC]
+        if opc > 9:
+            res = await self.handleServerResponse(payload)
+        else:
+            res = self.handlePeerResponse(payload)
+        
+        # TODO NOTE: conflicts with ret code -1 scenarios
+        if res < 0:
+            print("[PEER] Server response returned failed")
+    
 
     async def send(self, writer, payload:dict):
         """
         Encode the payload to an encoded JSON object and send to the appropriate client/server
-        ? Do we automatically know who to send it to ?
         """
         jsonPayload = json.dumps(payload)
         print("[PEER] Sending encoded request message:", (jsonPayload))
@@ -88,7 +130,7 @@ class Client:
 
 ########### REQUEST & RESPONSE HANDLING ###########
 
-    def handleServerResponse(self, response) -> int:
+    async def handleServerResponse(self, response) -> int:
         """
         Handle the response from a server, presumably a python dict has been loaded from the JSON object.
         Note: The delegation must be handled elsewhere (i.e. in receive()) to determine whether its SERVER or PEER response using OPC 
@@ -122,10 +164,10 @@ class Client:
             self.piece_buffer.setBuffer(torrent[TOTAL_PIECES])
             
             #we immediately start the downloading process upon receiving the torrent object
-            self.downloadFile(torrent[TOTAL_PIECES], torrent[FILE_NAME])
-            print("DEBUG: downloading torrent : ", torrent[FILE_NAME])
+            await self.downloadFile(torrent[TOTAL_PIECES], torrent[FILE_NAME])
         elif opc == OPT_START_SEED or opc == OPT_UPLOAD_FILE:
             self.peer_am_seeding = True
+            await self.startSeeding()
         elif opc == OPT_STOP_SEED:
             self.peer_am_seeding = False
             print("todo: allow the user to regain control?")
@@ -145,18 +187,18 @@ class Client:
         elif opc == OPT_UPLOAD_FILE:
             numPieces = self.uploadFile(filename)
             
-            # NOTE: hacky way to check if the file was valid..
+            # NOTE: hacky way to handle the invalid file exception
             if numPieces == 0:
                 return {}
-            
-            payload[FILE_NAME] = filename
+
+            payload[FILE_NAME] = self.fileStrip(filename)
             payload[TOTAL_PIECES] = numPieces
 
         return payload
 
-    def handlePeerResponse(self, response):
+    def handlePeerResponse(self, response) -> int:
         """
-        Handle the response from a peer.
+        Handle the response from a peer. Returns 1 if successful 
         """
         ret = response[RET]
         opc = response[OPC]
@@ -172,6 +214,8 @@ class Client:
             idx = response[PIECE_IDX]
             newPiece = Piece(idx, data)
             self.piece_buffer.addData(newPiece)
+        
+        return 1
 
     def handlePeerRequest(self, request) -> dict():
         """
@@ -216,7 +260,7 @@ class Client:
 ########### HELPER FUNCTIONS ###########
 
     # This may need to be async here..
-    def simplePeerSelection(self, numPieces:int):
+    async def simplePeerSelection(self, numPieces:int):
         """
         A simple peer selection that downloads and entire file from a single peer.
         """
@@ -229,20 +273,20 @@ class Client:
         
         for idx in range(numPieces):
             request = self.createPeerRequest(OPT_GET_PIECE, idx)
-            self.connectToPeer(initialPeer_ip, initialPeer_port, request)
+            await self.connectToPeer(initialPeer_ip, initialPeer_port, request)
         
-    def downloadFile(self, numPieces:int, filename:str):
+    async def downloadFile(self, numPieces:int, filename:str):
         """
         Method for starting the download of a file by calling the peer selection method to download pieces
         Once done, output it to the output directory with peer_id appended to the filename.
         """
-        self.simplePeerSelection(numPieces)
+        await self.simplePeerSelection(numPieces)
 
         while not self.piece_buffer.checkIfHaveAllPieces:
             continue
         
         pieces2file = []
-        outputDir = '../output/' + self.peer_id + '_' + filename
+        outputDir = 'output/' + self.peer_id + '_' + filename
         for i in range(self.piece_buffer.getSize()):
             pieces2file.append(self.piece_buffer.getData(i))
 
@@ -286,6 +330,20 @@ class Client:
         hashString = self.src_ip+self.src_port
         return hashlib.md5(hashString.encode()).hexdigest()
 
+    def fileStrip(self, filename) -> str:
+        """
+        Strips the filename from directory path and escape characters
+        """
+        size = len(filename)
+        stripped = ""
+        for idx in range(size-1, -1, -1):
+            if filename[idx] == "/" or filename[idx] == "\'":
+                break
+            else:
+                stripped+=filename[idx]
+
+        # this reverses the string
+        return stripped[::-1]
         
 class Piece:
     """
