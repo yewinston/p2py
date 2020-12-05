@@ -1,19 +1,26 @@
-import protocol as p
+from protocol import *
+import base64
+
+ENCODING = 'utf-8'
 
 def encodeToBytes(file_name:str):
     pieces = []
     numPieces = 0
     with open(file_name, "rb") as input_file:
-        piece = input_file.read(p.PIECE_SIZE)
+        piece = input_file.read(PIECE_SIZE)
         while piece:
             numPieces+=1
-            pieces.append(piece)
-            piece = input_file.read(p.PIECE_SIZE)
+            encodedPiece = base64.b64encode(piece)
+            hexPiece = encodedPiece.decode(ENCODING)
+            pieces.append(hexPiece)
+            piece = input_file.read(PIECE_SIZE)
     return pieces, numPieces
 
 def decodeToFile(pieces:[], output_name:str):
     with open(output_name, "wb") as output_file:
         for block in pieces:
+            encodedBlock = block.encode(ENCODING)
+            decodedBlock = base64.b64decode(encodedBlock)
             output_file.write(block)
 
 

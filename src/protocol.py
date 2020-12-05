@@ -1,10 +1,5 @@
 # defines the PEER2PEER protocol and PEER2SERVER protocol.
 
-#Server 2 Peer
-OPT_RES_LIST = 10
-OPT_RES_OBJ = 11
-OPT_RES_UPDATE_STAT = 12         #the last 2 isn't really needed?
-OPT_RES_UPDATE_STOP = 13
 
 # PEER 2 SERVER              
 OPT_GET_LIST = 10
@@ -40,6 +35,8 @@ TORRENT = 'TORRENT_OBJ'
 PIECE_IDX = 'PIECE_IDX'
 PIECE_DATA = 'PIECE_DATA'
 PEER_LIST = 'PEER_LIST'
+SEEDER_LIST = 'SEEDER_LIST'
+LEECHER_LIST = 'LEECHER_LIST'
 
 
 PIECE_SIZE = 4096

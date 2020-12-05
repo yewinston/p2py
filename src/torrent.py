@@ -1,35 +1,42 @@
-
+from protocol import *
 
 #Todo: create the Torrent object
 class Torrent:
-    def __init__(self, filename):
+    def __init__(self, tid, filename, numPieces):
+        self.tid = tid
         self.filename = filename
-        self.pieces = 5
-        self.peers = {}
+        self.pieces = numPieces
+        self.seeders = {}
+        self.leechers = {}
         return
     
-
-    def addPeer(self, req: dict, status):
-        newPeer = {
-            'ip': req['ip_address'],
-            'status':  status,
-            'port': req['port'],
+    def addSeeder(self, pid: str, peer_ip, peer_port):
+        newSeeder = {
+            PID: pid,
+            IP: peer_ip,
+            PORT: peer_port
         }
-        if status=='seeder':                           # TODO: THIS WILL NEED TO CHANGE
-            newPeer['pieces'] = req['pieces']         #change peer status to seeder
-        else :
-            newPeer['pieces'] = 0
-        self.peers[req['pid'] ] = newPeer            #insert peer into peerlist
+        self.seeders.update({PID: newSeeder})
+
+    def removeSeeder(self, pid: str):
+        if pid in self.seeders:
+            del self.seeders[pid]
+
+    def addLeecher(self, pid: int, peer_ip, peer_port):
+        newLeecher = {
+            PID: pid,
+            IP: peer_ip,
+            PORT: peer_port
+        }
+        self.leechers.update({PID: newLeecher})
+
+    def removeLeecher(self, pid: str):
+        if pid in self.leechers:
+            del self.leechers[pid]
     
-    def updatePeer(self, req: dict, status):
-        try:
-            self.peers[req['pid'] ]['status'] = status
-            if (status=='seeder'):
-                self.peers[req['pid'] ]['pieces'] = self.pieces
-        except:
-            print("Peer has failed to be updated")
-    
-    def getPeerList(self):
-        return self.peers
+    def getSeederList(self) -> dict():
+        return self.seeders
+
+    def getLeecher(self) -> dict():
+        return self.leechers
         
-    

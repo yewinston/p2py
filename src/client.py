@@ -6,6 +6,7 @@ import file_handler
 import json
 import asyncio
 import sys
+import uuid
 from socket import *
 
 class Client:
@@ -131,6 +132,10 @@ class Client:
             payload[FILE_NAME] = filename
             payload[TOTAL_PIECES] = numPieces
 
+            #DEBUG send a piece to tracker
+            # payload["DEBUG_PIECE_1"] = (self.piece_buffer.getBuffer()[0])
+            # print(self.piece_buffer.getBuffer()[0])
+
         return payload
 
     def handlePeerResponse(self, response):
@@ -174,6 +179,7 @@ class Client:
             piece_idx = request[PIECE_IDX]
             if self.piece_buffer.checkIfHavePiece(piece_idx):
                 response[PIECE_DATA] = self.piece_buffer.getData(piece_idx)
+                response[PIECE_IDX] = request[PIECE_IDX]
                 response[RET] = RET_SUCCESS
             else:
                 response[RET] = RET_FAIL
@@ -221,7 +227,7 @@ class Client:
         pieces2file = []
         outputDir = './output' + peer_id + '_' + filename
         for i in range(self.piece_buffer.getSize):
-            pieces2file.append(self.piece_buffer.getData().data)
+            pieces2file.append(self.piece_buffer.getData())
 
         try:
             file_handler.decodeToFile(pieces2file, outputDir)
@@ -236,6 +242,11 @@ class Client:
         populated and initialized.
         Returns the number of pieces in the created piece buffer.
         """
+        
+        # DEBUGGING:
+        filename = 'sample.txt'
+        pieces = []
+        numPieces = 0
         try:
             pieces, numPieces = file_handler.encodeToBytes(filename)
         except:
@@ -243,17 +254,19 @@ class Client:
 
         # Set the buffer size and add the file's data to the buffer.
         self.piece_buffer.setBuffer(numPieces)
+
         for idx in range(len(pieces)):
             currPiece = Piece(idx, pieces[idx])
-            self.piece_buffer.addData(currPiece)
+            self.piece_buffer.addData(currPiece)      
 
         return numPieces
 
-    def createPeerID(self) -> int:
+    def createPeerID(self) -> str:
         """
-        Ideally, create a unique peer ID... maybe need a hashing function
+        Ideally, create a unique peer ID.
+        uuid4 > uuid1 as it gives privacy (no MAC address)
         """
-        return 1
+        return str(uuid.uuid4())
         
 class Piece:
     """
@@ -261,10 +274,9 @@ class Piece:
     index -> piece's index in the expected buffer
 
     """
-    def __init__(self, index: int, data: bytes):
+    def __init__(self, index: int, data):
         self.index = index
         self.data = data
-        self.length = length
 
 class PieceBuffer:
     """
@@ -276,7 +288,7 @@ class PieceBuffer:
         self.__size = 0
         self.__havePieces = []
     
-    def getBuffer(self) -> [bytes]:
+    def getBuffer(self):
         return self.__buffer
 
     def setBuffer(self, length: int):
@@ -294,15 +306,14 @@ class PieceBuffer:
             self.__havePieces[idx] = True
             return 1
 
-    def getData(self, idx: int) -> Piece:
+    def getData(self, idx: int):
         """
-        Returns the piece object at the specified index.
+        Returns the piece bytes at the specified index.
         """
         if idx < 0 or idx >= self.__size or self.__buffer[idx] == 0:
             return -1
         else:
-            piece = Piece(idx, self.__buffer[idx])
-            return piece
+            return self.__buffer[idx]
 
     def getSize(self) -> int:
         return self.__size

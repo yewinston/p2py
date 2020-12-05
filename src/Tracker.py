@@ -1,7 +1,9 @@
 from bencode import *
 from torrent import *
+from protocol import *
+
 # FIXME: would p be confusing for peer?
-import protocol as p
+from protocol import *
 import asyncio
 import json
 
@@ -12,112 +14,116 @@ class TrackerServer:
         self.torrent = {}              #the torrent list (dictionary), defined by its unique torrentID
 
     def handleRequest(self, req):
-        opc = req.get('OPC')
-        response = {"OPC": opc}
+        opc = req.get(OPC)
+        response = {OPC: opc}
         
-        if opc == p.OPT_GET_LIST:
+        if opc == OPT_GET_LIST:
             torrent_list = self.getTorrentDict()
             if torrent_list:
-                response.update({"torrent_list": self.getTorrentDict()})
-                response.update({ "RET": p.OPT_RES_LIST })
+                response.update({ TORRENT_LIST: self.getTorrentDict() })
+                response.update({ RET: RET_SUCCESS })
             else:
-                response.update({ "RET": p.RET_FAIL })
+                response.update({ RET: RET_FAIL })
 
-        elif opc == p.OPT_GET_TORRENT:
+        elif opc == OPT_GET_TORRENT:
             torrent_obj = self.getTorrentObject(req)
             if torrent_obj:
-                response.update({"torrent_obj": torrent_obj})
-                response.update({ "RET": p.OPT_RES_OBJ })
+                response.update({ TORRENT: torrent_obj })
+                response.update({ RET: RET_SUCCESS })
             else:
-                response.update({ "RET": p.RET_FAIL })
+                response.update({ RET: RET_FAIL })
 
-        elif opc == p.OPT_START_SEED:
-            response.update({"RET": self.updatePeerStatus(req)})
+        elif opc == OPT_START_SEED:
+            response.update({ RET: self.updatePeerStatus(req) })
 
-        elif opc == p.OPT_STOP_SEED:
-            response.update({"RET": self.updateStopSeed(req)})
+        elif opc == OPT_STOP_SEED:
+            response.update({ RET: self.updateStopSeed(req) })
 
-        elif opc == p.OPT_UPLOAD_FILE: #upload new file --> create new torrent object
-            response.update({"RET": self.addNewFile(req)})
+        elif opc == OPT_UPLOAD_FILE: #upload new file --> create new torrent object
+            response.update({ RET: self.addNewFile(req) })
 
-        else:                   #invalid opc
-            response.update({ "RET": p.RET_FAIL })
+        else: #invalid opc
+            response.update({ RET: RET_FAIL })
 
         return response
     
-    def getTorrentDict(self):                   #res opcode=1
-        responseDict = {
-            'torrentList': self.torrent,            #THIS WILL BE RETURNED AS A DICT: DICT
-            'opc': p.OPT_RES_LIST,
-            'res': p.RET_SUCCESS
-        }
-        return responseDict
+    def getTorrentDict(self) -> dict():                   #res opcode=1
+        """
+        Returns a dictionary of available torrents stored in the tracker
+        """
+        return self.torrent
     
-    def getTorrentObject(self, req: dict):      #res opcode=2
-        responseDict = {
-            'opc': p.OPT_RES_OBJ,
-            'res': p.RET_SUCCESS                    #to tell client that the torrent object exists
-        }
-        if req['tid'] not in self.torrent:  #torrent object does not exist in list
-            responseDict['res'] = p.RET_FAIL
-            return responseDict                    
-        myTorrentObj = self.torrent[ req['tid'] ]
-        responseDict['torrentObj'] = myTorrentObj                 
-        self.torrent[req['tid'] ].addPeer(req, 'leecher')                    #add peer into torrent object      
+    def getTorrentObject(self, req: dict) -> dict():      #res opcode=2
+        """
+        Returns the specific torrent dictionary from the torrent id
+        """
+        responseDict = {}
+        if req[TID] not in self.torrent:  #torrent object does not exist in list
+            return responseDict   
+
+        torrentObj = self.torrent[req[TID]]
+        # we must deconstruct the torrent object since we can't send an object
+        # for now we'll just say you can only seed once you are done leeching.
+        responseDict[TORRENT] = { 
+                                  TID: torrentObj.tid,
+                                  FILE_NAME: torrentObj.filename, 
+                                  TOTAL_PIECES: torrentObj.pieces, 
+                                  SEEDER_LIST: torrentObj.seeders,
+                                  LEECHER_LIST: torrentObj.leechers
+                                }                 
+        self.torrent[ req[TID] ].addLeecher(req[PID], req[IP], req[PORT])  
         return responseDict
 
-    def updatePeerStatus(self, req:dict):
-        responseDict = {
-            'opc': p.OPT_START_SEED,
-            'res': p.RET_SUCCESS
-        }
-        if req['tid'] not in self.torrent:
-            responseDict['res'] = p.RET_FAIL
-            return responseDict
-        self.torrent[ req['tid'] ].updatePeer(req, 'seeder')
-        return responseDict
+    def updatePeerStatus(self, req:dict) -> int:
+        """
+        Adds peer to the torrent's peer seeding list
+        """
+        if req[TID] not in self.torrent:
+            return RET_FAIL
 
-    def updateStopSeed(self, req: dict): 
-        responseDict = {
-            'opc': p.OPT_STOP_SEED,
-            'res': p.RET_SUCCESS
-        }
-        if req['tid'] not in self.torrent:
-            responseDict['res'] = p.RET_FAIL
-            return responseDict
-        self.torrent[req['tid'] ].updatePeer(req, 'None')   
-        return responseDict
+        self.torrent[ req[TID] ].addSeeder(req[PID], req[IP], req[PORT])
+        # for now we'll just say that you can only seed once you are done leeching
+        self.torrent[ req[TID]].removeLeecher(req[PID], req[IP], req[PORT])
+        return RET_SUCCESS
 
-    def addNewFile(self, req: dict):
-        responseDict = {
-            'opc': p.OPT_UPLOAD_FILE,
-            'res': p.RET_SUCCESS
-        }
-        try:                    
-            myTorrent = Torrent(req['filename'])        #create the torrent object
-            myTorrent.addPeer(req, 'seeder')                      #add peer the seeder into torrent object   
-            self.torrent[self.nextTorrentId] = myTorrent    #insert into torrent dictionary
-            self.nextTorrentId+=1
-        except:
-            responseDict['res'] = p.RET_FAIL
-        return responseDict
+    def updateStopSeed(self, req: dict) -> int: 
+        if req[TID] not in self.torrent:
+            return RET_FAIL
+        
+        peer = req[PID]
+        if peer:
+            self.torrent[req[TID]].removePeer(req[PID])
+        else:
+            return RET_FAIL
+        
+        return RET_SUCCESS
+
+    def addNewFile(self, req: dict) -> int:
+        """
+        Creates a torrent from the given filename and pieces and adds it to the torrent list
+        """
+        newTorrent = Torrent(self.nextTorrentId, req[FILE_NAME], req[TOTAL_PIECES])        #create the torrent object
+        newTorrent.addSeeder(req[PID], req[IP], req[PORT])                      #add peer the seeder into torrent object   
+        self.torrent[self.nextTorrentId] = newTorrent    #insert into torrent dictionary
+        self.nextTorrentId+=1
+        # print(f"That piece: {req['DEBUG_PIECE_1']!r}")
+        return RET_SUCCESS
     
     async def receiveRequest(self, reader, writer):
         '''
             Take in the client request
-            It will call handleRequest -> give it a response object {"OPT": __, "RET": __, "payload": __ }
+            It will call handleRequest -> give it a response object {"OPT": __, RET: __, "payload": __ }
             receiveRequest will send this ---^ response object
         '''
         # TODO: 200 is the current constant, what is max req request size?
         try:
-            data = await reader.read(200)
+            data = await reader.read(600)
         
             cliRequest = json.loads(data.decode())
             addr = writer.get_extra_info('peername')
 
             print(f"\n[TRACKER] Debug received {cliRequest!r} from {addr!r}.")
             
-            # TO CONSIDER: handleRequest(...) only returns 0/1 or [torrent_list, torrent_obj]
             response = self.handleRequest(cliRequest)
 
             # Send payload response to client

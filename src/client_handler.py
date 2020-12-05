@@ -65,7 +65,8 @@ async def main():
         opt = handleUserChoice()
 
         if opt > 0:
-            payload = cli.createServerRequest(opc=opt)
+            # DEBUG: hardcoding filename
+            payload = cli.createServerRequest(opc=opt, torrent_id=None, filename='sample.txt')
             # print("[PEER] Debug payload:", payload)
 
             # scenario 1: send a message
