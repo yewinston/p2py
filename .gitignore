@@ -124,3 +124,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .vscode/settings.json
+src/input/music_video.mp4

@@ -1,11 +1,9 @@
 from bencode import *
 from torrent import *
 from protocol import *
-
-# FIXME: would p be confusing for peer?
-from protocol import *
 import asyncio
 import json
+import sys
 
 class TrackerServer:                              
     #torrent metadata
@@ -23,7 +21,7 @@ class TrackerServer:
                 response.update({ TORRENT_LIST: self.getTorrentDict() })
                 response.update({ RET: RET_SUCCESS })
             else:
-                response.update({ RET: RET_FAIL })
+                response.update({ RET: RET_NO_AVAILABLE_TORRENTS })
 
         elif opc == OPT_GET_TORRENT:
             torrent_obj = self.getTorrentObject(req)
@@ -92,7 +90,7 @@ class TrackerServer:
         
         self.torrent[ req[TID] ].addSeeder(req[PID], req[IP], req[PORT])
         # NOTE for now we'll just say that you can only seed once you are done leeching
-        self.torrent[ req[TID]].removeLeecher(req[PID], req[IP], req[PORT])
+        self.torrent[ req[TID]].removeLeecher(req[PID])
         return RET_SUCCESS
 
     def updateStopSeed(self, req: dict) -> int: 
@@ -145,9 +143,10 @@ class TrackerServer:
             await writer.drain()
             # print("[TRACKER] Closing the connection for", addr)
         except:
+            print(sys.exc_info()[0])
             print("[TRACKER] Peer", writer.get_extra_info('peername'), "has disconnected.")
 
-        # writer.close()
+        writer.close()
 
 async def main():
     ip = "127.0.0.1"

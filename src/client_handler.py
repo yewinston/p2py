@@ -95,8 +95,15 @@ async def main():
 
                 # scenario 2: receive a message
                 result = await cli.receive(reader)
-                
-                if result != RET_SUCCESS:
+
+                if result == RET_FINISHED_DOWNLOAD:
+                    reader, writer = await cli.connectToTracker(dest_ip, dest_port)
+                    payload = cli.createServerRequest(opc=OPT_START_SEED, torrent_id=0)
+                    await cli.send(writer, payload)
+                    result = await cli.receive(reader)
+
+                    
+                elif result != RET_SUCCESS:
                     writer.close()
             else:
                 writer.close()

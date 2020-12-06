@@ -1,16 +1,17 @@
 # defines the PEER2PEER protocol and PEER2SERVER protocol.
 
-
-# PEER 2 SERVER              
+# PEER 2 SERVER         
 OPT_GET_LIST = 10
 OPT_GET_TORRENT = 11
 OPT_START_SEED = 12
 OPT_STOP_SEED = 13
 OPT_UPLOAD_FILE = 14
 
+RET_FINISHED_DOWNLOAD = 1
 RET_SUCCESS = 0
 RET_FAIL = -1
 RET_ALREADY_SEEDING = -2
+RET_NO_AVAILABLE_TORRENTS = -3
 
 # PEER 2 PEER
 OPT_STATUS_INTERESTED = 1
@@ -20,8 +21,7 @@ OPT_STATUS_UNCHOKED = 4
 OPT_GET_PEERS = 5
 OPT_GET_PIECE = 6
 
-# We should consider adding the payload names here and use it globally across our programs.
-# For example:
+# Payload Field Names
 
 OPC = 'OPC'
 RET = 'RET'
@@ -39,6 +39,6 @@ PEER_LIST = 'PEER_LIST'
 SEEDER_LIST = 'SEEDER_LIST'
 LEECHER_LIST = 'LEECHER_LIST'
 
-# 18KB / 16KB
+# Size constants - (24KB / 16KB)
 READ_SIZE = 24576
 PIECE_SIZE = 16384
