@@ -3,7 +3,7 @@ Handler class for taking in user's inputs.
 """
 
 from client import *
-import protocol as p
+from protocol import *
 import file_handler
 import asyncio
 import sys
@@ -22,25 +22,29 @@ def handleUserChoice():
             userInput = int(userInput)
             
             if userInput in range(0,6):
+                # Get list of torrents
                 if userInput == 1:
                     print("\n[PEER] Get list of torrents")
-                    return [p.OPT_GET_LIST, None, None]
+                    return [OPT_GET_LIST, None, None]
 
+                # Get a torrent
                 elif userInput == 2:
                     # NOTE we need error check.. like if the torrent id doesnt exist?
-                    torrent_id = int(input("Please enter the torrent id\n"))
-                    return [p.OPT_GET_TORRENT, torrent_id, None]
+                    torrent_id = int(input("[p2py client] Please enter the torrent id: "))
+                    return [OPT_GET_TORRENT, torrent_id, None]
 
+                # Upload a file
                 elif userInput == 3:
-                    filename = str(input("Please enter the filename.ext\n"))
-                    return [p.OPT_UPLOAD_FILE, None, filename]
+                    filename = str(input("[p2py client] Please enter the filename.ext: "))
+                    return [OPT_UPLOAD_FILE, None, filename]
                 
                 elif userInput == 4:
                     print("TODO: Heres some helpful stuff.")
                     return -1
                 
+                # Quitting
                 elif userInput == 5:
-                    return -1
+                    return [-1, None, None]
             else:
                 print("Invalid input. Please try again.")
         except ValueError:
@@ -71,26 +75,33 @@ async def main():
     
     if src_ip != None and src_port != None:
         cli = Client(src_ip, src_port)
+        
+        while True:
+            reader, writer = await cli.connectToTracker(dest_ip, dest_port)
 
-        reader, writer = await cli.connectToTracker(dest_ip, dest_port)
+            # NOTE - need a better way of getting user inputs. Currently just have "None" if the field is not used
+            argList = handleUserChoice()
 
-        # NOTE - need a better way of getting user inputs. Currently just have "None" if the field is not used
-        argList = handleUserChoice()
+            if argList[0] > 0:
+                payload = cli.createServerRequest(opc=argList[0], torrent_id=argList[1], filename=argList[2])
 
-        if argList[0] > 0:
-            payload = cli.createServerRequest(opc=argList[0], torrent_id=argList[1], filename=argList[2])
+                # NOTE: hacky way to handle invalid file handling (we pass an empty payload)
+                if not payload:
+                    writer.close()
+                    return
 
-            # NOTE: hacky way to handle invalid file handling (we pass an empty payload)
-            if not payload:
+                # scenario 1: send a message
+                await cli.send(writer, payload)
+
+                # scenario 2: receive a message
+                result = await cli.receive(reader)
+                
+                if result != RET_SUCCESS:
+                    writer.close()
+            else:
                 writer.close()
-                return
+                sys.exit(0)
 
-            # scenario 1: send a message
-            await cli.send(writer, payload)
-
-            # scenario 2: receive a message
-            await cli.receive(reader)
         writer.close()
-    
 if __name__ == "__main__":
     asyncio.run(main())

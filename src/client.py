@@ -158,6 +158,9 @@ class Client:
             for idx, curr_torrent in enumerate(torrent_list):
                 print(curr_torrent[TID], '\t', curr_torrent[FILE_NAME], '\t',  curr_torrent[TOTAL_PIECES], '\t\t', curr_torrent[SEEDER_LIST])
             print("\n///////////////////////////////////////////////////////////////////////////////////////////////////\n")
+
+            return RET_SUCCESS
+
         elif opc == OPT_GET_TORRENT:
             torrent = response[TORRENT]
             self.seeders_list = torrent[SEEDER_LIST]
@@ -165,9 +168,15 @@ class Client:
             
             #we immediately start the downloading process upon receiving the torrent object
             await self.downloadFile(torrent[TOTAL_PIECES], torrent[FILE_NAME])
+
+            return RET_SUCCESS
+            
         elif opc == OPT_START_SEED or opc == OPT_UPLOAD_FILE:
             self.peer_am_seeding = True
             await self.startSeeding()
+
+            return RET_SUCCESS
+
         elif opc == OPT_STOP_SEED:
             self.peer_am_seeding = False
             print("todo: allow the user to regain control?")

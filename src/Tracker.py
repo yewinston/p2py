@@ -143,11 +143,11 @@ class TrackerServer:
             writer.write(payload.encode())
             
             await writer.drain()
-            print("[TRACKER] Closing the connection for", addr)
+            # print("[TRACKER] Closing the connection for", addr)
         except:
             print("[TRACKER] Peer", writer.get_extra_info('peername'), "has disconnected.")
 
-        writer.close()
+        # writer.close()
 
 async def main():
     ip = "127.0.0.1"
