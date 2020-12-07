@@ -99,12 +99,20 @@ class TrackerServer:
         if req[TID] not in self.torrent:
             return RET_FAIL
         peer = req[PID]
-        if peer:  
+        if peer:
+            print("[TRACKER] Removing seeder:", req[PID])
             self.torrent[req[TID]].removeSeeder(req[PID])
+            self.checkSeedersList(req[TID])
         else:
             return RET_FAIL
         
         return RET_SUCCESS
+
+    def checkSeedersList(self, tid):
+        if len(self.torrent[tid].seeders) == 0:
+            self.torrent.pop(tid)
+            self.nextTorrentId -= 1
+            print(self.torrent)
 
     def addNewFile(self, req: dict) -> int:
         """

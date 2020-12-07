@@ -143,6 +143,7 @@ async def main():
                     payload = cli.createServerRequest(opc=OPT_START_SEED, torrent_id=0)
                     await cli.send(writer, payload)
                     result = await cli.receive(reader)
+                    writer.close()
                 
                 #finished seeding, send server msg to remove status as seeder
                 elif result==RET_FINSH_SEEDING:     
@@ -152,6 +153,7 @@ async def main():
                     await cli.send(writer, payload) #send msg to tracker
                     result = await cli.receive(reader)
                     print(result)
+                    writer.close()
 
                 elif result != RET_SUCCESS:
                     writer.close()
