@@ -158,22 +158,14 @@ class TrackerServer:
         writer.close()
 
 def parseCommandLine():
-    ip = None
     port = None
     args = len(sys.argv) - 1
 
     if args == 0:
-        return None, None
+        return None
     
-    elif args == 2:
-        ip = sys.argv[1]
-        port = sys.argv[2]
-
-        try:
-            asyncio.streams.socket.inet_aton(ip)
-        except asyncio.streams.socket.error:
-            print("Incorrect format for IP, please try again.")
-            return None, None
+    elif args == 1:
+        port = sys.argv[1]
 
         try:
             if int(port) not in range(0, 65536):
@@ -184,16 +176,16 @@ def parseCommandLine():
 
     else:
         print("Please double check arguments:")
-        print("tracker.py [server ip] [server port]")
-        print("Resorting to default server IP and port.")
+        print("tracker.py [server port]")
+        print("Resorting to default port.")
 
-    return ip, port
+    return port
 
 async def main():
-    ip, port = parseCommandLine()
+    ip = "127.0.0.1"
+    port = parseCommandLine()
 
-    if ip == None and port == None:
-        ip = "127.0.0.1"
+    if port == None:
         port = 8888
         
     t = TrackerServer()
