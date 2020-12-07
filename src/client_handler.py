@@ -39,8 +39,19 @@ def handleUserChoice():
                     return [OPT_UPLOAD_FILE, None, filename]
                 
                 elif userInput == 4:
-                    print("TODO: Heres some helpful stuff.")
-                    return -1
+                    print("\n///////////////////////////////////////////////////////////////////////////////////////////////////\n")
+                    print("[1] Get & display list of torrents:")
+                    print("\t - this option allows you to get a list of torrents and their associated torrent IDs (TID)\n")
+
+                    print("[2] Download Torrent:")
+                    print("\t - specify a torrent ID (TID) from the [1] list of torrents option to begin downloading a file\n")
+
+                    print("[3] Upload a new file:")
+                    print("\t - specify a file with format: [filename].[extension] , to add it to the torrent list.")
+                    print("\t - you will begin seeding for this file")
+                    print("\n///////////////////////////////////////////////////////////////////////////////////////////////////\n")
+                    input("Press enter to continue...")
+                    return [0, None, None]
                 
                 # Quitting
                 elif userInput == 5:
@@ -55,19 +66,51 @@ def parseCommandLine():
     src_port = None
     dest_ip = None
     dest_port = None
+    args = len(sys.argv) - 1
 
-    if len(sys.argv) - 1 == 4:
-        # TODO: error checking
+    if args == 4:
         src_ip = sys.argv[1]
         src_port = sys.argv[2]
         dest_ip = sys.argv[3]
         dest_port = sys.argv[4]
-    elif len(sys.argv) - 1 == 2:
+        
+        try:
+            asyncio.streams.socket.inet_aton(src_ip)
+            asyncio.streams.socket.inet_aton(dest_ip)
+        except asyncio.streams.socket.error:
+            print("Incorrect format for source or tracker IP, please try again.")
+            return None, None, None, None
+
+        try:
+            if int(src_port) not in range(0, 65536) or int(dest_port) not in range(0, 65536):
+                print("Port range must be [0, 65535], please try again.")
+                return None, None, None, None
+
+        except ValueError:
+            print("Incorrect format for source or tracker port given, please try again.")
+
+    elif args == 2:
         src_ip = sys.argv[1]
         src_port = sys.argv[2]
+
+        try:
+            asyncio.streams.socket.inet_aton(src_ip)
+        except asyncio.streams.socket.error:
+            print("Incorrect format for source or tracker IP, please try again.")
+            return None, None, None, None
+
+        try:
+            if int(src_port) not in range(0, 65536):
+                print("Port range must be [0, 65535], please try again.")
+                return None, None, None, None
+
+        except ValueError:
+            print("Incorrect format for source or tracker port given, please try again.")
+        
     else:
         print("Please double check arguments:")
         print("client_handler.py [source ip] [source port] [tracker_ip] [tracker_port]")
+
     return src_ip, src_port, dest_ip, dest_port
 
 async def main():
@@ -87,8 +130,7 @@ async def main():
 
                 # NOTE: hacky way to handle invalid file handling (we pass an empty payload)
                 if not payload:
-                    writer.close()
-                    return
+                    continue
 
                 # scenario 1: send a message
                 await cli.send(writer, payload)
@@ -102,9 +144,14 @@ async def main():
                     await cli.send(writer, payload)
                     result = await cli.receive(reader)
 
-                    
                 elif result != RET_SUCCESS:
                     writer.close()
+
+            # Help
+            elif argList[0] == 0:
+                writer.close()
+            
+            # Exit
             else:
                 writer.close()
                 sys.exit(0)

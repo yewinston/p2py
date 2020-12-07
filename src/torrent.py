@@ -1,6 +1,5 @@
 from protocol import *
 
-#Todo: create the Torrent object
 class Torrent:
     def __init__(self, tid, filename, numPieces):
         self.tid = tid

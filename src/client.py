@@ -152,8 +152,7 @@ class Client:
 
         if opc == OPT_GET_LIST:
 
-            # TODO NOTE: Currently we will just print the list of torrents here... should we delegate this back to client_handler somehow?
-            # Need to truncate filenames.. and have a better UI command line interface
+            # TODO NOTE: Need to truncate filenames.
             torrent_list = response[TORRENT_LIST]
 
             print("\n///////////////////////////////////////////////////////////////////////////////////////////////////\n")
@@ -356,10 +355,8 @@ class Client:
     def createPeerID(self) -> str:
         """
         Ideally, create a unique peer ID.
-        uuid4 > uuid1 as it gives privacy (no MAC address)
+        Uses src_ip + src_port and MD5 hash -> hexadecimal string as an ID.
         """
-        # TODO NOTE: Commenting this out for now since a new uuid is generated everytime.
-        #return str(uuid.uuid4())
         hashString = self.src_ip+self.src_port
         return hashlib.md5(hashString.encode()).hexdigest()
 
