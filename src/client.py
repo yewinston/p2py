@@ -9,13 +9,13 @@ import asyncio
 import sys
 import uuid
 import hashlib
-
+import threading
 class Client:
     def __init__(self, src_ip, src_port):
         self.src_ip = src_ip
         self.src_port = src_port
         self.peer_id = self.createPeerID()
-
+        self.tid = -1
         # Peer States
         self.peer_choked = True
         self.peer_interested = False
@@ -92,12 +92,31 @@ class Client:
 
         # TODO NOTE: we need to be able to allow the client to close the server (stop seeding) gracefully
         server = await asyncio.start_server(self.receiveRequest, self.src_ip, self.src_port)
+        if (server is None):
+            return
         addr = server.sockets[0].getsockname()
         print(f'[PEER] SEEDING !!! ... Serving on {addr}')
 
+        myThread = threading.Thread(target=self.seedCommand, args=[server])
+        myThread.start()
         async with server:
-            await server.serve_forever()
+            try:
+                print("Entering serverForever")
+                await server.serve_forever()
+            except:
+                print(sys.exc_info()[0])
+        myThread.join()
+        print("exiting")
 
+    def seedCommand(self, server):
+        print("[1]: Quit Seeding")
+        myInput = input("input:")
+        while (myInput!="1"):
+            print("[1]: Quit Seeding")                   #TODO:: INSERT HERE FOR OTHER POTENTIAL COMMANDS
+            myInput = input("input:")
+        print("quit seeding")
+        server.close()
+        print("server is closed")
 
     # TODO NOTE: This should probably be renamed to 'receiveResponse' as that is what this is actually doing
     async def receive(self, reader):
@@ -105,7 +124,6 @@ class Client:
         Handle incoming RESPONSE messages and decode to the JSON object.
         Pass the JSON object to handleRequest() that will handle the request appropriately.
         """
-
         data = await reader.read(READ_SIZE)
         payload = json.loads(data.decode())
         print(f'[PEER] Received decoded message: {payload!r}\n')
@@ -140,7 +158,8 @@ class Client:
         """
         ret = response[RET]
         opc = response[OPC]
-
+        if TID in response:
+            self.tid = response[TID]
         if ret == RET_FAIL:
             return -1
         elif ret == RET_ALREADY_SEEDING:
@@ -178,10 +197,11 @@ class Client:
             self.peer_am_leeching = False
             self.peer_am_seeding = True
             await self.startSeeding()
-            return RET_SUCCESS
+            return RET_FINSH_SEEDING
         elif opc == OPT_STOP_SEED:
             self.peer_am_seeding = False
             print("todo: allow the user to regain control?")
+            return RET_FINSH_SEEDING
 
         return 1
 

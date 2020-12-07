@@ -37,7 +37,10 @@ class TrackerServer:
             response.update({ RET: self.updateStopSeed(req) })
 
         elif opc == OPT_UPLOAD_FILE: #upload new file --> create new torrent object
-            response.update({ RET: self.addNewFile(req) })
+            myRET, myTid = self.addNewFile(req)
+            response.update({ RET: myRET,
+                              TID: myTid
+                            })
 
         else: #invalid opc
             response.update({ RET: RET_FAIL })
@@ -95,10 +98,9 @@ class TrackerServer:
     def updateStopSeed(self, req: dict) -> int: 
         if req[TID] not in self.torrent:
             return RET_FAIL
-        
         peer = req[PID]
-        if peer:
-            self.torrent[req[TID]].removePeer(req[PID])
+        if peer:  
+            self.torrent[req[TID]].removeSeeder(req[PID])
         else:
             return RET_FAIL
         
@@ -118,7 +120,7 @@ class TrackerServer:
         newTorrent.addSeeder(req[PID], req[IP], req[PORT])                      #add peer the seeder into torrent object   
         self.torrent[self.nextTorrentId] = newTorrent    #insert into torrent dictionary
         self.nextTorrentId+=1
-        return RET_SUCCESS
+        return RET_SUCCESS, newTorrent.tid
     
     async def receiveRequest(self, reader, writer):
         '''
