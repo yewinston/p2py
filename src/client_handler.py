@@ -139,20 +139,26 @@ async def main():
                 result = await cli.receive(reader)
 
                 if result == RET_FINISHED_DOWNLOAD:
+                    writer.close() # close original session, then start a new one
+
                     reader, writer = await cli.connectToTracker(dest_ip, dest_port)
                     payload = cli.createServerRequest(opc=OPT_START_SEED, torrent_id=0)
+
                     await cli.send(writer, payload)
                     result = await cli.receive(reader)
+
                     writer.close()
                 
                 #finished seeding, send server msg to remove status as seeder
-                elif result==RET_FINSH_SEEDING:     
+                elif result == RET_FINSH_SEEDING:   
+                    writer.close() # close original session, then start a new one
+
                     reader, writer = await cli.connectToTracker(dest_ip, dest_port)
-                    payload = cli.createServerRequest(opc = OPT_STOP_SEED, torrent_id=cli.tid)       #TODO: find a way to get the torrent tid
+                    payload = cli.createServerRequest(opc = OPT_STOP_SEED, torrent_id=cli.tid)
 
                     await cli.send(writer, payload) #send msg to tracker
                     result = await cli.receive(reader)
-                    print(result)
+                    
                     writer.close()
 
                 elif result != RET_SUCCESS:

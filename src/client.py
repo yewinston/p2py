@@ -105,8 +105,9 @@ class Client:
                 await server.serve_forever()
             except:
                 print(sys.exc_info()[0])
+                await server.wait_closed()
         myThread.join()
-        print("exiting")
+        print("Is serving:", server.is_serving())
 
     def seedCommand(self, server):
         print("[1]: Quit Seeding")
@@ -116,7 +117,6 @@ class Client:
             myInput = input("input:")
         print("quit seeding")
         server.close()
-        print("server is closed")
 
     # TODO NOTE: This should probably be renamed to 'receiveResponse' as that is what this is actually doing
     async def receive(self, reader):
@@ -200,7 +200,7 @@ class Client:
             return RET_FINSH_SEEDING
         elif opc == OPT_STOP_SEED:
             self.peer_am_seeding = False
-            print("todo: allow the user to regain control?")
+            # print("todo: allow the user to regain control?")
             return RET_FINSH_SEEDING
 
         return 1
