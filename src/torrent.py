@@ -1,6 +1,9 @@
 from src.protocol import *
 
 class Torrent:
+    """
+    Class object to represent each torrent stored in the Tracker
+    """
     def __init__(self, tid, filename, numPieces):
         self.tid = tid
         self.filename = filename

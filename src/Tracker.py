@@ -10,7 +10,10 @@ class TrackerServer:
         self.nextTorrentId = 0 
         self.torrent = {}              #the torrent list (dictionary), defined by its unique torrentID
 
-    def handleRequest(self, req):
+    def handleRequest(self, req) -> dict():
+        """
+        Handles the incoming requests for a client. Returns a response dictionary.
+        """
         opc = req.get(OPC)
         response = {OPC: opc}
         
@@ -52,7 +55,6 @@ class TrackerServer:
         """
         Returns a list of available torrents stored in the tracker.
         """
-        # TODO NOTE: We need to deconstruct the torrent object into a dict since we can't serialize the object. So currently, it will send a list of dictionaries instead.
         response = []
         for torrentObj in self.torrent.values():
             torrentDict = dict()
@@ -66,11 +68,9 @@ class TrackerServer:
     
     def getTorrentObject(self, req: dict) -> dict():      #res opcode=2
         """
-        Returns the specific torrent dictionary from the torrent id
+        Returns the specific torrent dictionary given the torrent id from the request
         """
         torrentDict = dict()
-        # NOTE: we must deconstruct the torrent object since we can't send an object
-        # for now we'll just say you can only seed once you are done leeching.
         torrentObj = self.torrent[req[TID]]
         torrentDict[TID] = torrentObj.tid
         torrentDict[FILE_NAME] = torrentObj.filename
@@ -89,11 +89,13 @@ class TrackerServer:
             return RET_FAIL
         
         self.torrent[ req[TID] ].addSeeder(req[PID], req[IP], req[PORT])
-        # NOTE for now we'll just say that you can only seed once you are done leeching
         self.torrent[ req[TID]].removeLeecher(req[PID])
         return RET_SUCCESS
 
-    def updateStopSeed(self, req: dict) -> int: 
+    def updateStopSeed(self, req: dict) -> int:
+        """
+        Removes the peer from the specified torrent's seeding list
+        """
         if req[TID] not in self.torrent:
             return RET_FAIL
         peer = req[PID]
@@ -107,6 +109,9 @@ class TrackerServer:
         return RET_SUCCESS
 
     def checkSeedersList(self, tid):
+        """
+        Called everytime updateStopSeed() is used, and deletes torrent from the torrent's list if there exist no seeders for it
+        """
         if len(self.torrent[tid].seeders) == 0:
             self.torrent.pop(tid)
             self.nextTorrentId -= 1
@@ -114,10 +119,8 @@ class TrackerServer:
 
     def addNewFile(self, req: dict) -> int:
         """
-        Creates a torrent from the given filename and pieces and adds it to the torrent list
+        Creates a torrent from the given filename and pieces and adds it to the torrent list. If the client is already seeding a file, return RET_ALREADY_SEEDING
         """
-
-        # Checks if the peer is already seeding a file
         for torrentObj in self.torrent.values():
             if req[PID] in torrentObj.getSeeders():
                 return RET_ALREADY_SEEDING

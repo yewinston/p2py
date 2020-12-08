@@ -28,7 +28,6 @@ def handleUserChoice():
 
                 # Get a torrent
                 elif userInput == 2:
-                    # NOTE we need error check.. like if the torrent id doesnt exist?
                     torrent_id = int(input("[p2py client] Please enter the torrent id: "))
                     return [OPT_GET_TORRENT, torrent_id, None]
 
@@ -121,7 +120,6 @@ async def main():
         while True:
             reader, writer = await cli.connectToTracker(dest_ip, dest_port)
 
-            # NOTE - need a better way of getting user inputs. Currently just have "None" if the field is not used
             argList = handleUserChoice()
 
             if argList[0] > 0:

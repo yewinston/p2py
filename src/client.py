@@ -30,6 +30,9 @@ class Client:
 ########### CONNECTION HANDLING ###########
 
     async def connectToTracker(self, ip, port):
+        """
+        Handles connecting to the tracker and returns the reader and writer.
+        """
         if ip == None and port == None:
             # Use default IP and port
             ip = "127.0.0.1"
@@ -69,7 +72,6 @@ class Client:
         """
         Handle incoming PEER requests and returns the appropriate response object
         """
-        print("todo receiving..")
         try:
             data = await reader.read(READ_SIZE)
 
@@ -92,8 +94,6 @@ class Client:
         """
         Once a client begins seeding, we need to open and host a connection as a 'server'
         """
-
-        # TODO NOTE: we need to be able to allow the client to close the server (stop seeding) gracefully
         server = await asyncio.start_server(self.receiveRequest, self.src_ip, self.src_port)
         if (server is None):
             return
@@ -121,7 +121,6 @@ class Client:
         print("quit seeding")
         server.close()
 
-    # TODO NOTE: This should probably be renamed to 'receiveResponse' as that is what this is actually doing
     async def receive(self, reader):
         """
         Handle incoming RESPONSE messages and decode to the JSON object.
@@ -278,7 +277,7 @@ class Client:
 
 ########### HELPER FUNCTIONS ###########
 
-    # This may need to be async here..
+    # NOT USED
     async def simplePeerSelection(self, numPieces:int):
         """
         A simple peer selection that downloads and entire file from the first peer in list
@@ -312,17 +311,6 @@ class Client:
             currPeer = currPiece % numPeers
             await self.connectToPeer(peerList[currPeer][IP], peerList[currPeer][PORT], requests_list[currPiece])
             currPiece +=1   
-
-        # TODO NOTE: this for asynchronous sending... seems like we need to use stream readers/writers..
-        # Current issue is that we can't receive asynchronously.
-        # tasks = []
-        # idx = 0
-        # for peer in self.seeders_list.values():
-        #     for i in range(len(requests_list[idx])):
-        #         tasks.append(self.connectToPeer(peer[IP], peer[PORT], requests_list[idx][i]))
-        #     idx+=1
-
-        # await asyncio.gather(*tasks)
         
     async def downloadFile(self, numPieces:int, filename:str):
         """
@@ -416,6 +404,9 @@ class PieceBuffer:
         return self.__buffer
 
     def setBuffer(self, length: int):
+        """
+        Initialize the piece buffer given the total number of pieces for the expected file
+        """
         self.__buffer = [0] * length
         self.__size = length
         self.__havePieces = [False] * length
