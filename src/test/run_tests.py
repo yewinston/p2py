@@ -13,14 +13,7 @@ def test_createPeerRequest():
 def test_createPeerResponse():
     print('todo')
 
-def test_setPieceBuffer():
-    print('todo')
-
 def test_createServerResponse():
     print('todo')
-
-def test_createNewTorrent():
-    print('todo')
-    
 
 
