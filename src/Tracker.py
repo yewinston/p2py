@@ -144,8 +144,9 @@ class TrackerServer:
             addr = writer.get_extra_info('peername')
 
             print(f"\n[TRACKER] Debug received {cliRequest!r} from {addr!r}.")
-
-            cliRequest.update({IP:writer.get_extra_info('peername')[0]})
+            
+            # Debug for over the network
+            # cliRequest.update({IP:writer.get_extra_info('peername')[0]})
 
             response = self.handleRequest(cliRequest)
             # Send payload response toConnecting to tracker at
