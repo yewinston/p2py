@@ -23,15 +23,16 @@ class TrackerServer:
                 response.update({ RET: RET_NO_AVAILABLE_TORRENTS })
 
         elif opc == OPT_GET_TORRENT:
-            torrent_obj = self.getTorrentObject(req)
-            if torrent_obj:
+            if req[TID] not in self.torrent:
+                response.update({RET: RET_TORRENT_DOES_NOT_EXIST})
+            else:
+                torrent_obj = self.getTorrentObject(req)
                 response.update({ TORRENT: torrent_obj })
                 response.update({ RET: RET_SUCCESS })
-            else:
-                response.update({ RET: RET_FAIL })
-
         elif opc == OPT_START_SEED:
-            response.update({ RET: self.updatePeerStatus(req) })
+            response.update({ RET: self.updatePeerStatus(req),
+                              TID: req[TID]
+                            })
 
         elif opc == OPT_STOP_SEED:
             response.update({ RET: self.updateStopSeed(req) })
@@ -68,9 +69,6 @@ class TrackerServer:
         Returns the specific torrent dictionary from the torrent id
         """
         torrentDict = dict()
-        if req[TID] not in self.torrent:  #torrent object does not exist in list
-            return {}   
-
         # NOTE: we must deconstruct the torrent object since we can't send an object
         # for now we'll just say you can only seed once you are done leeching.
         torrentObj = self.torrent[req[TID]]

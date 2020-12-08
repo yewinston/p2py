@@ -142,7 +142,7 @@ async def main():
                     writer.close() # close original session, then start a new one
 
                     reader, writer = await cli.connectToTracker(dest_ip, dest_port)
-                    payload = cli.createServerRequest(opc=OPT_START_SEED, torrent_id=0)
+                    payload = cli.createServerRequest(opc=OPT_START_SEED, torrent_id=argList[1])
 
                     await cli.send(writer, payload)
                     result = await cli.receive(reader)

@@ -35,6 +35,8 @@ class Client:
             ip = "127.0.0.1"
             port = "8888"
     
+        # NOTE: Suggestion... should we delegate the printing of "Connecting to..." text to client_handler such that it's only displayed ONCE? 
+        # This will atleast give the illusion we're not bootleg reconnecting every single while loop, as well as removing clutter from the CLI
         try:
             print("Connecting to tracker at " + ip + ":" + port + " ...")
             reader, writer = await asyncio.open_connection(ip, int(port))
@@ -49,6 +51,7 @@ class Client:
         """
         This function handles both sending the payload request, and receiving the expected response
         """
+        # NOTE: This has same issue as above note in connectToTracker, although I don't think we can take the "printing" out of this one. We can leave these prints.
         try:
             print("Connecting to seeder at" + ip + ":" + port + " ...")
             reader, writer = await asyncio.open_connection(ip, int(port))
@@ -59,7 +62,7 @@ class Client:
             sys.exit(-1) # different exit number can be used, eg) errno library
 
         await self.send(writer, requests)
-        await self.receive(reader)
+        res = await self.receive(reader)
         writer.close()
 
     async def receiveRequest(self, reader, writer):
@@ -133,10 +136,6 @@ class Client:
         else:
             res = self.handlePeerResponse(payload)
         
-        # TODO NOTE: conflicts with ret code -1 scenarios
-        if res < 0:
-            print("[PEER] Server response returned failed")
-        
         return res
     
 
@@ -154,13 +153,14 @@ class Client:
     async def handleServerResponse(self, response) -> int:
         """
         Handle the response from a server, presumably a python dict has been loaded from the JSON object.
-        Note: The delegation must be handled elsewhere (i.e. in receive()) to determine whether its SERVER or PEER response using OPC 
+        Returns the appropriate RET code to client_handler.
         """
         ret = response[RET]
         opc = response[OPC]
-        if TID in response:
-            self.tid = response[TID]
+
+        # RET Handling
         if ret == RET_FAIL:
+            print("[PEER] RESPONSE: returned failed")
             return -1
         elif ret == RET_ALREADY_SEEDING:
             print("[PEER] UPLOAD FAIL: You are already currently seeding a file.")
@@ -168,39 +168,36 @@ class Client:
         elif ret == RET_NO_AVAILABLE_TORRENTS:
             print("[PEER] GET TORRENT LIST FAIL: There are no available torrents right now.")
             return -1
+        elif ret == RET_TORRENT_DOES_NOT_EXIST:
+            print("[PEER] GET TORRENT FAIL: The torrent ID does not exist")
+            return -1
 
+        # If RET_SUCCESS, handle the response payload based on OPC
         if opc == OPT_GET_LIST:
-
-            # TODO NOTE: Need to truncate filenames.
             torrent_list = response[TORRENT_LIST]
-
             print("\n///////////////////////////////////////////////////////////////////////////////////////////////////\n")
             print("TID \t FILE_NAME \t TOTAL_PIECES \t SEEDERS \t")
             print("--- \t -------- \t ------------ \t ------- \t")
             for idx, curr_torrent in enumerate(torrent_list):
                 print(curr_torrent[TID], '\t', curr_torrent[FILE_NAME], '\t',  curr_torrent[TOTAL_PIECES], '\t\t', curr_torrent[SEEDER_LIST], '\n')
             print("\n///////////////////////////////////////////////////////////////////////////////////////////////////\n")
-
             return RET_SUCCESS
-
         elif opc == OPT_GET_TORRENT:
             torrent = response[TORRENT]
+            self.peer_am_leeching = True
             self.seeders_list = torrent[SEEDER_LIST]
             self.piece_buffer.setBuffer(torrent[TOTAL_PIECES])
-
             #we immediately start the downloading process upon receiving the torrent object
             await self.downloadFile(torrent[TOTAL_PIECES], torrent[FILE_NAME])
-
             return RET_FINISHED_DOWNLOAD    
-
         elif opc == OPT_START_SEED or opc == OPT_UPLOAD_FILE:
             self.peer_am_leeching = False
             self.peer_am_seeding = True
+            self.tid = response[TID]
             await self.startSeeding()
             return RET_FINSH_SEEDING
         elif opc == OPT_STOP_SEED:
             self.peer_am_seeding = False
-            # print("todo: allow the user to regain control?")
             return RET_FINSH_SEEDING
 
         return 1
