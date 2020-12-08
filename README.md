@@ -20,10 +20,10 @@ This project implements an emulated peer to peer file sharing service, based on 
 
 3. In the directory 'src', you can start the start the server (tracker):
 
-		tracker.py [src_port]
+		python3 tracker.py [src_port]
 4. Start as many clients (peers) by opening a new terminal and run: 
 
-		client_handler.py [src_ip] [src_port] [tracker_ip] [tracker_port]
+		python3 client_handler.py [src_ip] [src_port] [tracker_ip] [tracker_port]
 	* tracker_ip and port is visible in the tracker's command line window
 
 
@@ -34,8 +34,8 @@ This project implements an emulated peer to peer file sharing service, based on 
 
 *In the SRC directory..*
 
-1. Start the tracker: `tracker.py 8888` and note the IP address being served.
-2. Start a client on a new terminal by: `client_handler.py 127.0.0.1 8881 [tracker_ip] 8888`
+1. Start the tracker: `python3 tracker.py 8888` and note the IP address being served.
+2. Start a client on a new terminal by: `python3 client_handler.py 127.0.0.1 8881 [tracker_ip] 8888`
 
 **Assert the client connected successfully and the Command Line Interface is presented.**
 
@@ -53,7 +53,7 @@ This project implements an emulated peer to peer file sharing service, based on 
 *Continuing from uploading..*
 
 1. With the tracker and current seeder terminal still active, start a new client: 
-`client_handler.py 127.0.0.2 8882 [tracker_ip] 8888`
+`python3 client_handler.py 127.0.0.2 8882 [tracker_ip] 8888`
 2. Use the CLI to enter '1' to retrieve the latest list of torrents
 
 **Assert the file 'music.mp3' is available in the list of torrents, and the list contains the seeder's id**
@@ -88,5 +88,3 @@ program prepends the client's peer id to the filename for distinguishing downloa
 3. Use the CLI to enter '1' to get the list of torrents. 
 **Assert that the two seeders have left, and that the last seeder is the only one left seeding in the list**
 
-## NON-LOCAL USAGE
-p2py requires the specified the source port for the tracker/client to be a open port (through port forwarding) if you wish to host a tracker server/seed torrents. By default, the peer and tracker will use the 8888 port. For testing purposes all on the same machine, you can host a tracker server and connect/seed/leech with other clients without port forwarding.
