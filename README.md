@@ -2,6 +2,11 @@
 
 This project implements an emulated peer to peer file sharing service, based on the [BitTorrent](https://wiki.theory.org/BitTorrentSpecification) specification. The purpose of the project is to learn how to build a peer to peer application using socket programming to solve file sharing bottlenecks in client-server models, in which multiple clients would download files hosted on a single server. The goal is to implement a decentralized process that allows clients to share (upload & download) files in segments (pieces) from other various clients purely through peer to peer TCP connections.
 
+> **Contributors:**
+>  - Richard Dong  
+>  - Winston Ye   
+>  - Leon Trieu
+
 ## ENVIRONMENT
 - Python 3.8+, pip3 installed
 - OS: Linux Ubuntu, Windows 10
