@@ -1,4 +1,4 @@
-from src.protocol import *
+from protocol import *
 import base64
 
 ENCODING = 'utf-8'

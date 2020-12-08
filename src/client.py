@@ -1,8 +1,8 @@
 """
 Provides Client's functionalities and actions. See client_handler which is the main entry point for user interaction handling
 """
-from src.protocol import *
-import src.file_handler
+from protocol import *
+import file_handler
 from socket import *
 import json
 import asyncio
