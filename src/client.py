@@ -1,8 +1,8 @@
 """
 Provides Client's functionalities and actions. See client_handler which is the main entry point for user interaction handling
 """
-from protocol import *
-import file_handler
+from src.protocol import *
+import src.file_handler as fd
 from socket import *
 import json
 import asyncio
@@ -340,7 +340,7 @@ class Client:
             pieces2file.append(self.piece_buffer.getData(i))
 
         try:
-            file_handler.decodeToFile(pieces2file, outputDir)
+            fd.decodeToFile(pieces2file, outputDir)
             print("[PEER] Successfully downloaded file: ", outputDir)
         except:
             print("Exception occured in downloadFile() with filename:", filename)
@@ -355,7 +355,7 @@ class Client:
         pieces = []
         numPieces = 0
         try:
-            pieces, numPieces = file_handler.encodeToBytes(filename)
+            pieces, numPieces = fd.encodeToBytes(filename)
         except:
             print("Exception occured in uploadFile() with filename:", '\''+filename+'\'', ", please check your filename or directory.")
             return 0

@@ -1,5 +1,4 @@
-from src.client import *
-from src.Tracker import *
+import src.client
 
 def test_createServerRequest():
     # sample :
