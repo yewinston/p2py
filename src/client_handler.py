@@ -137,28 +137,23 @@ async def main():
 
                 if result == RET_FINISHED_DOWNLOAD:
                     writer.close() # close original session, then start a new one
-
                     reader, writer = await cli.connectToTracker(dest_ip, dest_port)
                     payload = cli.createServerRequest(opc=OPT_START_SEED, torrent_id=argList[1])
-
                     await cli.send(writer, payload)
                     result = await cli.receive(reader)
-
                     writer.close()
-                
+                    
                 #finished seeding, send server msg to remove status as seeder
-                elif result == RET_FINSH_SEEDING:   
+                if result == RET_FINSH_SEEDING:   
                     writer.close() # close original session, then start a new one
-
                     reader, writer = await cli.connectToTracker(dest_ip, dest_port)
                     payload = cli.createServerRequest(opc = OPT_STOP_SEED, torrent_id=cli.tid)
-
                     await cli.send(writer, payload) #send msg to tracker
                     result = await cli.receive(reader)
-                    
                     writer.close()
+                    break
 
-                elif result != RET_SUCCESS:
+                if result != RET_SUCCESS:
                     writer.close()
 
             # Help
@@ -171,5 +166,9 @@ async def main():
                 sys.exit(0)
 
         writer.close()
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Exiting the program.")

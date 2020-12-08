@@ -98,28 +98,16 @@ class Client:
         if (server is None):
             return
         addr = server.sockets[0].getsockname()
-        print(f'[PEER] SEEDING !!! ... Serving on {addr}')
-
-        myThread = threading.Thread(target=self.seedCommand, args=[server])
-        myThread.start()
+        print(f'[PEER] SEEDING !!! ... Serving on {addr}\n')
+        loop = asyncio.get_event_loop()
         async with server:
-            try:
-                print("Entering serverForever")
+            try: 
                 await server.serve_forever()
             except:
-                print(sys.exc_info()[0])
+                pass
+            finally:
+                server.close()
                 await server.wait_closed()
-        myThread.join()
-        print("Is serving:", server.is_serving())
-
-    def seedCommand(self, server):
-        print("[1]: Quit Seeding")
-        myInput = input("input:")
-        while (myInput!="1"):
-            print("[1]: Quit Seeding")                   #TODO:: INSERT HERE FOR OTHER POTENTIAL COMMANDS
-            myInput = input("input:")
-        print("quit seeding")
-        server.close()
 
     async def receive(self, reader):
         """

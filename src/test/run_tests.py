@@ -1,4 +1,4 @@
-import src.client
+from src.client import *
 
 def test_createServerRequest():
     # sample :
