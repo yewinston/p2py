@@ -144,8 +144,15 @@ class TrackerServer:
             addr = writer.get_extra_info('peername')
 
             print(f"\n[TRACKER] Debug received {cliRequest!r} from {addr!r}.")
+
+            cliRequest.update({IP:writer.get_extra_info('peername')[0]})
+
             response = self.handleRequest(cliRequest)
-            # Send payload response to client
+            # Send payload response toConnecting to tracker at
+            # 
+            # 
+            # 
+            #  client
             payload = json.dumps(response)
             print("[TRACKER] Debug send payload:", payload)
             writer.write(payload.encode())
@@ -183,7 +190,7 @@ def parseCommandLine():
     return port
 
 async def main():
-    ip = "127.0.0.1"
+    ip = asyncio.streams.socket.gethostbyname(asyncio.streams.socket.gethostname() )
     port = parseCommandLine()
 
     if port == None:

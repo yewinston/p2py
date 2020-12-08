@@ -23,7 +23,6 @@ def handleUserChoice():
             if userInput in range(0,6):
                 # Get list of torrents
                 if userInput == 1:
-                    print("\n[PEER] Get list of torrents")
                     return [OPT_GET_LIST, None, None]
 
                 # Get a torrent

@@ -33,8 +33,12 @@ class Client:
         """
         Handles connecting to the tracker and returns the reader and writer.
         """
+        if ip == None and port == None:
+            # Use default IP and port
+            ip = "127.0.0.1"
+            port = "8888"
+    
         try:
-           
             reader, writer = await asyncio.open_connection(ip, int(port))
             return reader, writer
 
@@ -48,7 +52,7 @@ class Client:
         """
         # NOTE: This has same issue as above note in connectToTracker, although I don't think we can take the "printing" out of this one. We can leave these prints.
         try:
-            print("Connecting to seeder at" + ip + ":" + port + " ...")
+            print("Connecting to seeder at " + ip + ":" + port + " ...")
             reader, writer = await asyncio.open_connection(ip, int(port))
             print("Connected as leecher: " + self.src_ip + ":" + self.src_port + ".")
 
@@ -90,8 +94,8 @@ class Client:
         if (server is None):
             return
         addr = server.sockets[0].getsockname()
-        print(f'[PEER] Seeding on address: {addr}')
-        print("[PEER] Press CTRL+C to stop seeding.")
+        print(f'[PEER] SEEDING !!! ... Serving on {addr}\n')
+        loop = asyncio.get_event_loop()
         async with server:
             try: 
                 await server.serve_forever()
@@ -409,7 +413,7 @@ class PieceBuffer:
             return -1
         else:
             return self.__buffer[idx]
-
+            
     def getSize(self) -> int:
         return self.__size
 
