@@ -33,17 +33,9 @@ class Client:
         """
         Handles connecting to the tracker and returns the reader and writer.
         """
-        if ip == None and port == None:
-            # Use default IP and port
-            ip = "127.0.0.1"
-            port = "8888"
-    
-        # NOTE: Suggestion... should we delegate the printing of "Connecting to..." text to client_handler such that it's only displayed ONCE? 
-        # This will atleast give the illusion we're not bootleg reconnecting every single while loop, as well as removing clutter from the CLI
         try:
-            print("Connecting to tracker at " + ip + ":" + port + " ...")
+           
             reader, writer = await asyncio.open_connection(ip, int(port))
-            print("Connected as client: " + self.src_ip + ":" + self.src_port + " - PID [" + self.peer_id + "]")
             return reader, writer
 
         except ConnectionError:
@@ -98,8 +90,8 @@ class Client:
         if (server is None):
             return
         addr = server.sockets[0].getsockname()
-        print(f'[PEER] SEEDING !!! ... Serving on {addr}\n')
-        loop = asyncio.get_event_loop()
+        print(f'[PEER] Seeding on address: {addr}')
+        print("[PEER] Press CTRL+C to stop seeding.")
         async with server:
             try: 
                 await server.serve_forever()

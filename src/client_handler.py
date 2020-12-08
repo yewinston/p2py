@@ -116,6 +116,14 @@ async def main():
     
     if src_ip != None and src_port != None:
         cli = Client(src_ip, src_port)
+
+        if dest_ip == None and dest_port == None:
+            # Use default IP and port
+            dest_ip = "127.0.0.1"
+            dest_port = "8888"
+        
+        print("Connecting to tracker at " + dest_ip + ":" + dest_port + " ...")
+        print("Connecting as client: " + src_ip + ":" + src_port + " ...")
         
         while True:
             reader, writer = await cli.connectToTracker(dest_ip, dest_port)
