@@ -89,4 +89,4 @@ program prepends the client's peer id to the filename for distinguishing downloa
 **Assert that the two seeders have left, and that the last seeder is the only one left seeding in the list**
 
 ## NON-LOCAL USAGE (OVER THE NETWORK)
-p2py requires the specified the source port for the tracker/client to be a open port (through port forwarding) if you wish to host a tracker server/seed torrents. By default, the peer and tracker will use the 8888 port. For testing purposes all on the same machine, you can host a tracker server and connect/seed/leech with other clients without port forwarding.
+p2py requires the specified the source port for the tracker/client to be a open port (through port forwarding) if you wish to host a tracker server/seed torrents. By default, the peer and tracker will use the 8888 port. For testing purposes on a single machine, you can host a tracker server and connect/seed/leech with other clients without port forwarding.
