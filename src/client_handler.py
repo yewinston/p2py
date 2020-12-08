@@ -2,9 +2,9 @@
 Handler class for taking in user's inputs.
 """
 
-from client import *
-from protocol import *
-import file_handler
+from src.client import *
+from src.protocol import *
+import src.file_handler
 import asyncio
 import sys
 

@@ -1,4 +1,4 @@
-from protocol import *
+from src.protocol import *
 
 class Torrent:
     def __init__(self, tid, filename, numPieces):

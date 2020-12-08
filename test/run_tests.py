@@ -1,7 +1,5 @@
-import pytest
-
 from src.client import *
-from src.tracker import *
+from src.Tracker import *
 
 def test_createServerRequest():
     # sample :

@@ -1,5 +1,5 @@
-from torrent import *
-from protocol import *
+from src.torrent import *
+from src.protocol import *
 import asyncio
 import json
 import sys
