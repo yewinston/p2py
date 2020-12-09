@@ -52,7 +52,7 @@ This project implements an emulated peer to peer file sharing service, based on 
 
 *Continuing from uploading..*
 
-1. With the tracker and current seeder terminal still active, start a new client: 
+1. With the tracker and current seeder terminal still active, start a new client that will download the file: 
 `python3 client_handler.py 127.0.0.2 8882 [tracker_ip] 8888`
 2. Use the CLI to enter '1' to retrieve the latest list of torrents
 
@@ -73,7 +73,7 @@ program prepends the client's peer id to the filename for distinguishing downloa
 
 *Continuing from downloading a file..*
 
-1. With the tracker and current peer terminal active, open another terminal and create another peer by repeating the steps from [Downloading a file] with a different client ip & port
+1. With the tracker and current two seeder terminals active, open another terminal and create another peer by repeating the steps from [Downloading a file] with a different client ip & port
 
 **Assert the list of torrents contains the additional seeder, and during the download it retrieves data from both available seeders.**
 
