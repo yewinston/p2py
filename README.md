@@ -90,3 +90,9 @@ program prepends the client's peer id to the filename for distinguishing downloa
 
 ## NON-LOCAL USAGE (OVER THE NETWORK)
 p2py requires the specified the source port for the tracker/client to be a open port (through port forwarding) if you wish to host a tracker server/seed torrents. By default, the peer and tracker will use the 8888 port. For testing purposes on a single machine, you can host a tracker server and connect/seed/leech with other clients without port forwarding.
+
+## KNOWN BUGS OR ISSUES
+
+- Exiting the seeding status with "CTRL+C" may sometimes yield some exceptions, which are related to the aysncio event loop handling. These exceptions may not be caught (due to the asynchronous behaviour) and printed to terminal. However, these are not a concern to the functionality of the application, as the seeder will still first be able to update it's seeding status in the tracker before disconnecting.
+- If the seeder abruptly disconnects from the tracker (for example force-closing the terminal), the seeder's status may not be updated in the tracker's side and still continue to be "seeding". If this occurs, please just restart the tracker and workflow.
+
