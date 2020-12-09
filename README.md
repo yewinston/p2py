@@ -73,7 +73,7 @@ program prepends the client's peer id to the filename for distinguishing downloa
 
 *Continuing from downloading a file..*
 
-1. Repeat the steps from [Downloading a file] with a different client ip & port
+1. With the tracker and current peer terminal active, open another terminal and create another peer by repeating the steps from [Downloading a file] with a different client ip & port
 
 **Assert the list of torrents contains the additional seeder, and during the download it retrieves data from both available seeders.**
 
